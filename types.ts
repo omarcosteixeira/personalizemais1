@@ -7,6 +7,12 @@ export enum PricingMode {
 
 export type OrderStatus = 'PENDING' | 'AWAITING_PAYMENT' | 'PRODUCTION' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED';
 
+export interface SystemConfig {
+  basicPlanPrice: number;
+  proPlanPrice: number;
+  paymentLink: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -18,7 +24,6 @@ export interface Product {
   materialId?: string;
   imageUrl?: string;
   isHighlighted?: boolean;
-  // Extras
   hasSize?: boolean;
   availableSizes?: string[];
   hasTheme?: boolean;
@@ -35,7 +40,6 @@ export interface QuotationItem {
   unitPrice: number;
   total: number;
   isAdHoc?: boolean;
-  // Selected Extras
   selectedSize?: string;
   selectedTheme?: string;
   productionTime?: string;
@@ -115,7 +119,6 @@ export interface AppSettings {
     tiktokShop?: string;
   };
   shippingOptions: ShippingOption[];
-  // WhatsApp Messages
   waMessages: {
     quotation: string;
     awaiting_payment: string;
@@ -130,7 +133,6 @@ export interface AppSettings {
     secondaryColor: string;
     storeLayout: 'modern' | 'minimal' | 'bold';
   };
-  // Financial Metrics
   financials: {
     monthlyFixedCosts: number;
     desiredMonthlySalary: number;

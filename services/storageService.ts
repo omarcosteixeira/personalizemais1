@@ -1,5 +1,5 @@
 
-import { Product, Quotation, StockItem, StockMovement, AppSettings, Coupon, Customer, CustomFont } from '../types';
+import { Product, Quotation, StockItem, StockMovement, AppSettings, Coupon, Customer, CustomFont, SystemConfig } from '../types';
 import { db, auth } from './firebaseService';
 import { 
   collection, doc, setDoc, getDocs, deleteDoc, getDoc, query, orderBy 
@@ -30,6 +30,12 @@ const DEFAULT_SETTINGS: AppSettings = {
   },
   theme: { primaryColor: '#4338ca', secondaryColor: '#10b981', storeLayout: 'modern' },
   financials: { monthlyFixedCosts: 1500, desiredMonthlySalary: 3000, workingDaysPerMonth: 22, hoursPerDay: 8 }
+};
+
+const DEFAULT_SYSTEM_CONFIG: SystemConfig = {
+  basicPlanPrice: 49.90,
+  proPlanPrice: 89.90,
+  paymentLink: 'https://mpago.la/exemplo'
 };
 
 const getTenantPath = () => {
@@ -76,6 +82,18 @@ export const storage = {
     if (settingsSnap.exists()) {
       localStorage.setItem(`pplus_${user.uid}_settings`, JSON.stringify(settingsSnap.data()));
     }
+  },
+
+  getSystemConfig: async (): Promise<SystemConfig> => {
+    const configSnap = await getDoc(doc(db, 'system', 'config'));
+    if (configSnap.exists()) {
+      return configSnap.data() as SystemConfig;
+    }
+    return DEFAULT_SYSTEM_CONFIG;
+  },
+
+  saveSystemConfig: async (config: SystemConfig) => {
+    await setDoc(doc(db, 'system', 'config'), config);
   },
 
   getPublicData: async (tenantId: string) => {

@@ -29,6 +29,7 @@ import PDV from './components/PDV';
 import LoginPage from './components/LoginPage';
 import AdminPanel from './components/AdminPanel';
 import PromotionalAI from './components/PromotionalAI';
+import LandingPage from './components/LandingPage';
 
 type Tab = 'dashboard' | 'new' | 'history' | 'products' | 'store' | 'settings' | 'coupons' | 'customers' | 'fonts' | 'pdv' | 'admin';
 
@@ -40,6 +41,7 @@ const App: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSyncing, setIsSyncing] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   
   const [products, setProducts] = useState<Product[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -111,6 +113,7 @@ const App: React.FC = () => {
       setProducts([]);
       setQuotations([]);
       setStock([]);
+      setShowLogin(false);
     });
   };
 
@@ -119,6 +122,12 @@ const App: React.FC = () => {
     return <Storefront products={publicData.products} />;
   }
 
+  // Se o usuário não está aprovado e não quer o login, mostra a Landing Page
+  if (userStatus === 'GUEST' && !showLogin) {
+    return <LandingPage onStart={() => setShowLogin(true)} />;
+  }
+
+  // Mostra a tela de login/expirado/pendente se necessário
   if (userStatus !== 'APPROVED' && !isPublicStore) {
     return <LoginPage userStatus={userStatus} onAuthChange={() => {}} />;
   }

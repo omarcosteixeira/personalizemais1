@@ -21,9 +21,11 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
-  MoreVertical
+  MoreVertical,
+  FileSpreadsheet
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
+import * as XLSX from 'xlsx';
 
 interface Props {
   products: Product[];
@@ -35,7 +37,7 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const csvInputRef = useRef<HTMLInputElement>(null);
+  const excelInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -139,6 +141,75 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
     onUpdate();
   };
 
+  // Funções de Exportação e Importação Excel
+  const handleExportExcel = () => {
+    const dataToExport = products.map(p => ({
+      ID: p.id,
+      Nome: p.name,
+      Categoria: p.category,
+      PrecoVenda: p.price,
+      CustoProducao: p.productionCost,
+      ModoCobranca: p.mode,
+      Descricao: p.description || '',
+      LinkImagem: p.imageUrl || '',
+      Destaque: p.isHighlighted ? 'Sim' : 'Não',
+      TemGrade: p.hasSize ? 'Sim' : 'Não',
+      Tamanhos: (p.availableSizes || []).join(', '),
+      SolicitarTema: p.hasTheme ? 'Sim' : 'Não',
+      PrazoEntrega: p.productionTime || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Produtos");
+    XLSX.writeFile(workbook, "catalogo_personalize_plus.xlsx");
+  };
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const workbook = XLSX.read(bstr, { type: 'binary' });
+        const wsname = workbook.SheetNames[0];
+        const ws = workbook.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws) as any[];
+
+        data.forEach(item => {
+          if (!item.Nome || !item.PrecoVenda) return;
+
+          const importedProduct: Product = {
+            id: item.ID || Math.random().toString(36).substr(2, 9),
+            name: item.Nome,
+            category: item.Categoria || 'Geral',
+            price: parseFloat(item.PrecoVenda) || 0,
+            productionCost: parseFloat(item.CustoProducao) || 0,
+            mode: (item.ModoCobranca as PricingMode) || PricingMode.UNIT,
+            description: item.Descricao || '',
+            imageUrl: item.LinkImagem || '',
+            isHighlighted: item.Destaque === 'Sim',
+            hasSize: item.TemGrade === 'Sim',
+            availableSizes: item.Tamanhos ? item.Tamanhos.split(',').map((s: string) => s.trim()) : [],
+            hasTheme: item.SolicitarTema === 'Sim',
+            productionTime: item.PrazoEntrega || ''
+          };
+          storage.saveProduct(importedProduct);
+        });
+
+        onUpdate();
+        alert(`${data.length} produtos processados com sucesso!`);
+        if (excelInputRef.current) excelInputRef.current.value = '';
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao ler o arquivo Excel. Verifique o formato.");
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
   return (
     <div className="space-y-4 lg:space-y-6">
       <div className="bg-white p-4 lg:p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between gap-4">
@@ -146,7 +217,21 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
           <h3 className="text-lg lg:text-xl font-bold text-slate-800">Meus Produtos</h3>
           <p className="text-xs lg:text-sm text-slate-500">Gestão de itens e catálogo</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button 
+            onClick={handleExportExcel}
+            className="px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl text-xs font-bold hover:bg-emerald-100 flex items-center gap-2 transition-all border border-emerald-100"
+          >
+            <Download className="w-4 h-4"/> Exportar Excel
+          </button>
+          <button 
+            onClick={() => excelInputRef.current?.click()}
+            className="px-4 py-3 bg-amber-50 text-amber-700 rounded-2xl text-xs font-bold hover:bg-amber-100 flex items-center gap-2 transition-all border border-amber-100"
+          >
+            <Upload className="w-4 h-4"/> Importar Excel
+          </button>
+          <input type="file" ref={excelInputRef} className="hidden" accept=".xlsx, .xls" onChange={handleImportExcel} />
+          
           <button onClick={() => setIsAdding(true)} className="flex-1 lg:flex-none px-6 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-bold hover:bg-indigo-700 flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 transition-all">
             <Plus className="w-5 h-5"/> Novo Produto
           </button>

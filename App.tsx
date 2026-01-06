@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, History, Package, LayoutDashboard, Printer, Box, ExternalLink, 
   ChevronLeft, Settings, Ticket, Users, Calculator, Layers, FileSpreadsheet, 
-  Type, ShoppingCart, Menu, LogOut, ShieldCheck, X, MoreHorizontal, Copy
+  Type, ShoppingCart, Menu, LogOut, ShieldCheck, X, MoreHorizontal, Copy,
+  Sparkles
 } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -27,12 +28,13 @@ import FontTester from './components/FontTester';
 import PDV from './components/PDV';
 import LoginPage from './components/LoginPage';
 import AdminPanel from './components/AdminPanel';
+import PromotionalAI from './components/PromotionalAI';
 
 type Tab = 'dashboard' | 'new' | 'history' | 'products' | 'store' | 'settings' | 'coupons' | 'customers' | 'fonts' | 'pdv' | 'admin';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
-  const [productSubTab, setProductSubTab] = useState<'catalog' | 'pricing' | 'stock' | 'sheet'>('catalog');
+  const [productSubTab, setProductSubTab] = useState<'catalog' | 'pricing' | 'stock' | 'sheet' | 'promotional_ai'>('catalog');
   const [user, setUser] = useState<any>(null);
   const [userStatus, setUserStatus] = useState<'GUEST' | 'PENDING' | 'EXPIRED' | 'APPROVED'>('GUEST');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -150,7 +152,8 @@ const App: React.FC = () => {
                 {id:'catalog',l:'Catálogo',i:Package},
                 {id:'pricing',l:'Precificação',i:Calculator},
                 {id:'sheet',l:'Folhas',i:FileSpreadsheet},
-                {id:'stock',l:'Estoque',i:Box}
+                {id:'stock',l:'Estoque',i:Box},
+                {id:'promotional_ai',l:'Arte IA',i:Sparkles}
               ].map(sub => (
                 <button key={sub.id} onClick={() => setProductSubTab(sub.id as any)} className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 whitespace-nowrap transition-all ${productSubTab === sub.id ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}>
                   <sub.i className="w-4 h-4" /> {sub.l}
@@ -161,6 +164,7 @@ const App: React.FC = () => {
             {productSubTab === 'pricing' && <PricingCalculator products={products} onProductCreated={refreshData} />}
             {productSubTab === 'stock' && <StockManagement products={products} onUpdate={refreshData} />}
             {productSubTab === 'sheet' && <SheetCalculator />}
+            {productSubTab === 'promotional_ai' && <PromotionalAI products={products} />}
           </div>
         );
       case 'fonts': return <FontTester />;

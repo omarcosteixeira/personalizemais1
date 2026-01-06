@@ -19,7 +19,9 @@ import {
   Clock,
   Layers,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  ExternalLink,
+  MoreVertical
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
@@ -44,7 +46,6 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
   const [imageUrl, setImageUrl] = useState('');
   const [isHighlighted, setIsHighlighted] = useState(false);
   
-  // New Extra Fields
   const [hasSize, setHasSize] = useState(false);
   const [availableSizes, setAvailableSizes] = useState<string[]>([]);
   const [hasTheme, setHasTheme] = useState(false);
@@ -72,23 +73,14 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
 
   const handleAiImprove = async () => {
     if (!description && !name) {
-      alert("Escreva pelo menos o nome ou um rascunho da descrição para que a IA possa ajudar.");
+      alert("Escreva pelo menos o nome ou um rascunho da descrição.");
       return;
     }
 
     setIsAiLoading(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Você é um especialista em marketing e copywriting para gráficas rápidas. 
-      Sua tarefa é reescrever a descrição do produto abaixo para torná-la altamente profissional, persuasiva e atraente para vendas na loja online.
-      Foque nos benefícios, na qualidade da impressão, durabilidade dos materiais e acabamento impecável.
-      Mantenha um tom que gere confiança e desejo de compra.
-      
-      Produto: ${name}
-      Categoria: ${category}
-      Descrição Atual: ${description}
-      
-      Responda APENAS com o texto da nova descrição melhorada, sem introduções ou explicações.`;
+      const prompt = `Melhore esta descrição de produto para uma gráfica rápida, tornando-a persuasiva: Produto: ${name}. Categoria: ${category}. Texto base: ${description}.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
@@ -96,12 +88,10 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
       });
 
       const improvedText = response.text;
-      if (improvedText) {
-        setDescription(improvedText.trim());
-      }
+      if (improvedText) setDescription(improvedText.trim());
     } catch (error) {
-      console.error("Erro ao melhorar descrição com IA:", error);
-      alert("Não foi possível conectar com a inteligência artificial agora. Tente novamente em instantes.");
+      console.error(error);
+      alert("IA indisponível no momento.");
     } finally {
       setIsAiLoading(false);
     }
@@ -117,18 +107,9 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
     if (!name || price <= 0) return;
     const product: Product = {
       id: editingId || Math.random().toString(36).substr(2, 9),
-      name, 
-      description,
-      price, 
-      productionCost, 
-      mode, 
-      category: category || 'Geral', 
-      imageUrl, 
-      isHighlighted,
-      hasSize,
-      availableSizes,
-      hasTheme: hasSize || hasTheme, // Força tema se tiver tamanho
-      productionTime
+      name, description, price, productionCost, mode, 
+      category: category || 'Geral', imageUrl, isHighlighted,
+      hasSize, availableSizes, hasTheme: hasSize || hasTheme, productionTime
     };
     storage.saveProduct(product);
     onUpdate();
@@ -159,34 +140,33 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-200 gap-4">
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-white p-4 lg:p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between gap-4">
         <div>
-          <h3 className="text-xl font-bold text-slate-800">Catálogo Admin</h3>
-          <p className="text-sm text-slate-500">Gestão de produtos e destaques da loja</p>
+          <h3 className="text-lg lg:text-xl font-bold text-slate-800">Meus Produtos</h3>
+          <p className="text-xs lg:text-sm text-slate-500">Gestão de itens e catálogo</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <input type="file" ref={csvInputRef} onChange={() => {}} className="hidden" accept=".csv" />
-          <button onClick={() => csvInputRef.current?.click()} className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-50 transition-colors"><Upload className="w-4 h-4"/> Importar</button>
-          <button onClick={() => {}} className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-50 transition-colors"><Download className="w-4 h-4"/> Exportar</button>
-          <button onClick={() => setIsAdding(true)} className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-100 transition-all"><Plus className="w-4 h-4"/> Novo Item</button>
+        <div className="flex gap-2">
+          <button onClick={() => setIsAdding(true)} className="flex-1 lg:flex-none px-6 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-bold hover:bg-indigo-700 flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 transition-all">
+            <Plus className="w-5 h-5"/> Novo Produto
+          </button>
         </div>
       </div>
 
       {isAdding && (
-        <div className="bg-white p-8 rounded-3xl shadow-xl border-2 border-indigo-100 animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white p-6 lg:p-8 rounded-[32px] shadow-2xl border-2 border-indigo-100 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 lg:gap-6">
             <div className="md:col-span-2 space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase">Nome do Produto</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Produto</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase">Categoria</label>
-              <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ex: Camisetas" />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoria</label>
+              <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase">Tipo Cobrança</label>
-              <select value={mode} onChange={(e) => setMode(e.target.value as PricingMode)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cobrança</label>
+              <select value={mode} onChange={(e) => setMode(e.target.value as PricingMode)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl">
                 <option value={PricingMode.UNIT}>Unidade</option>
                 <option value={PricingMode.AREA}>M² (em cm)</option>
                 <option value={PricingMode.MILHEIRO}>Milheiro</option>
@@ -195,232 +175,126 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
             
             <div className="md:col-span-4 space-y-2">
               <div className="flex justify-between items-center">
-                <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><FileText className="w-3 h-3"/> Descrição detalhada (aparece na loja)</label>
-                <button 
-                  onClick={handleAiImprove}
-                  disabled={isAiLoading}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all border border-indigo-200 disabled:opacity-50"
-                >
-                  {isAiLoading ? (
-                    <>
-                      <Loader2 className="w-3 h-3 animate-spin" /> Processando...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3 h-3" /> Melhorar com IA
-                    </>
-                  )}
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Descrição</label>
+                <button onClick={handleAiImprove} disabled={isAiLoading} className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] font-black border border-indigo-200 flex items-center gap-1">
+                  {isAiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} IA
                 </button>
               </div>
-              <textarea 
-                value={description} 
-                onChange={(e) => setDescription(e.target.value)} 
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none h-32 resize-none focus:ring-2 focus:ring-indigo-500 font-medium text-slate-700"
-                placeholder="Ex: Impressão de alta qualidade..."
-              />
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none h-24 text-sm" />
             </div>
 
-            {/* Extras Section */}
-            <div className="md:col-span-4 bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-6">
-              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-500"/> Configurações Extras do Produto
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Tamanhos */}
-                <div className="space-y-4">
+            <div className="md:col-span-4 bg-slate-50 p-4 lg:p-6 rounded-2xl border border-slate-200 space-y-4">
+              <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">Configurações Mobile</h4>
+              <div className="flex flex-col lg:flex-row gap-6">
+                <div className="flex-1 space-y-3">
                   <div className="flex items-center gap-2">
-                    <input 
-                      type="checkbox" 
-                      id="checkSize" 
-                      checked={hasSize} 
-                      onChange={e => {
-                        setHasSize(e.target.checked);
-                        // Ao habilitar tamanhos, o tema também deve ser solicitado conforme requisito
-                        if (e.target.checked) setHasTheme(true);
-                      }} 
-                      className="w-4 h-4 accent-indigo-600"
-                    />
-                    <label htmlFor="checkSize" className="text-sm font-bold text-slate-700">Habilitar Tamanhos Específicos</label>
+                    <input type="checkbox" checked={hasSize} onChange={e => {setHasSize(e.target.checked); if(e.target.checked) setHasTheme(true);}} className="w-5 h-5 accent-indigo-600"/>
+                    <label className="text-xs font-bold text-slate-700">Ter Grade de Tamanhos</label>
                   </div>
-                  
                   {hasSize && (
-                    <div className="space-y-4 animate-in slide-in-from-left-2">
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Grade Infantil</p>
-                        <div className="flex flex-wrap gap-2">
-                          {kidsSizes.map(s => (
-                            <button 
-                              key={s} 
-                              onClick={() => toggleSize(s)}
-                              className={`w-10 h-10 rounded-lg text-xs font-bold transition-all border-2 ${availableSizes.includes(s) ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:border-indigo-200'}`}
-                            >
-                              {s}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Grade Adulto</p>
-                        <div className="flex flex-wrap gap-2">
-                          {adultSizes.map(s => (
-                            <button 
-                              key={s} 
-                              onClick={() => toggleSize(s)}
-                              className={`w-10 h-10 rounded-lg text-xs font-bold transition-all border-2 ${availableSizes.includes(s) ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:border-indigo-200'}`}
-                            >
-                              {s}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                    <div className="flex flex-wrap gap-1.5 pt-2">
+                      {adultSizes.map(s => (
+                        <button key={s} onClick={() => toggleSize(s)} className={`px-3 py-2 rounded-lg text-[10px] font-black border-2 transition-all ${availableSizes.includes(s) ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'}`}>{s}</button>
+                      ))}
                     </div>
                   )}
                 </div>
-
-                <div className="space-y-6">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <input 
-                        type="checkbox" 
-                        id="checkTheme" 
-                        checked={hasTheme || hasSize} 
-                        onChange={e => setHasTheme(e.target.checked)} 
-                        className="w-4 h-4 accent-indigo-600"
-                        disabled={hasSize} // Se tem tamanho, o tema é obrigatório pelo requisito
-                      />
-                      <label htmlFor="checkTheme" className={`text-sm font-bold ${hasSize ? 'text-slate-400' : 'text-slate-700'}`}>Campo de Tema/Arte {hasSize && '(Obrigatório p/ Tamanhos)'}</label>
-                    </div>
-                    {(hasTheme || hasSize) && <p className="text-[10px] text-slate-400 italic">O sistema solicitará o tema ao adicionar o item no orçamento.</p>}
+                <div className="flex-1 space-y-3">
+                   <div className="flex items-center gap-2">
+                    <input type="checkbox" checked={hasTheme || hasSize} onChange={e => setHasTheme(e.target.checked)} disabled={hasSize} className="w-5 h-5 accent-indigo-600"/>
+                    <label className="text-xs font-bold text-slate-700">Solicitar Tema/Arte</label>
                   </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"><Clock className="w-3 h-3"/> Prazo de Produção Estimado</label>
-                    <input 
-                      type="text" 
-                      value={productionTime} 
-                      onChange={e => setProductionTime(e.target.value)} 
-                      placeholder="Ex: 5 dias úteis" 
-                      className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm"
-                    />
-                  </div>
+                  <input type="text" value={productionTime} onChange={e => setProductionTime(e.target.value)} placeholder="Prazo (Ex: 3 dias)" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs" />
                 </div>
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase text-emerald-600">Custo Produção (R$)</label>
-              <input type="number" step="0.01" value={productionCost} onChange={(e) => setProductionCost(parseFloat(e.target.value) || 0)} className="w-full p-3 bg-emerald-50 border border-emerald-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
+              <label className="text-[10px] font-black text-emerald-600 uppercase">Custo Produção</label>
+              <input type="number" value={productionCost} onChange={(e) => setProductionCost(parseFloat(e.target.value) || 0)} className="w-full p-3 bg-emerald-50 border border-emerald-100 rounded-xl" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase text-indigo-600">Preço Venda (R$)</label>
-              <input type="number" step="0.01" value={price} onChange={(e) => setPrice(parseFloat(e.target.value) || 0)} className="w-full p-3 bg-indigo-50 border border-indigo-100 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" />
+              <label className="text-[10px] font-black text-indigo-600 uppercase">Preço Venda</label>
+              <input type="number" value={price} onChange={(e) => setPrice(parseFloat(e.target.value) || 0)} className="w-full p-3 bg-indigo-50 border border-indigo-100 rounded-xl" />
             </div>
-            
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase">Foto do Produto</label>
-              <div className="flex items-center gap-3">
-                <input type="file" ref={fileInputRef} onChange={() => {}} className="hidden" accept="image/png, image/jpeg" />
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-200 transition-all border border-slate-200"
-                >
-                  <Upload className="w-4 h-4" /> Enviar Foto
-                </button>
-                {imageUrl && (
-                  <div className="w-12 h-12 rounded-lg border-2 border-indigo-200 overflow-hidden shrink-0 shadow-sm">
-                    <img src={imageUrl} className="w-full h-full object-cover" alt="Preview" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl h-[52px] border border-slate-200">
-              <input type="checkbox" checked={isHighlighted} onChange={(e) => setIsHighlighted(e.target.checked)} className="w-5 h-5 accent-indigo-600 cursor-pointer" id="highlight-check"/>
-              <label htmlFor="highlight-check" className="text-xs font-bold text-slate-600 cursor-pointer flex items-center gap-1"><Star className={`w-3 h-3 ${isHighlighted ? 'fill-yellow-400 text-yellow-400' : ''}`}/> Destacar na Loja</label>
-            </div>
-            
-            <div className="md:col-span-4 flex gap-2 justify-end pt-6 border-t border-slate-100">
-              <button onClick={resetForm} className="px-8 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">Cancelar</button>
-              <button onClick={handleSave} className="px-12 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">Salvar Produto</button>
+            <div className="md:col-span-2 flex gap-2 justify-end pt-4">
+              <button onClick={resetForm} className="flex-1 lg:flex-none px-6 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl text-sm">Cancelar</button>
+              <button onClick={handleSave} className="flex-1 lg:flex-none px-10 py-3 bg-indigo-600 text-white font-bold rounded-xl text-sm shadow-xl shadow-indigo-100">Salvar</button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Produto</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Custo</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Venda</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Rentab.</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Destaque</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {products.map(p => {
-                const profit = p.price - p.productionCost;
-                const margin = p.price > 0 ? (profit / p.price) * 100 : 0;
-                return (
-                  <tr key={p.id} className="group hover:bg-[#F8FAFC] transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden border border-slate-200 group-hover:scale-105 transition-transform">
-                           {p.imageUrl ? (
-                             <img src={p.imageUrl} className="w-full h-full object-cover" alt={p.name} />
-                           ) : (
-                             <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-6 h-6 text-slate-300"/></div>
-                           )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-700">{p.name}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{p.category}</p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {p.productionTime && (
-                              <span className="text-[8px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-black uppercase tracking-widest">
-                                <Clock className="w-2 h-2 inline mr-1"/> {p.productionTime}
-                              </span>
-                            )}
-                            {p.hasSize && (
-                              <span className="text-[8px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-black uppercase tracking-widest">
-                                Grade Ativa
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right text-xs text-slate-500 font-medium">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.productionCost)}</td>
-                    <td className="px-6 py-4 text-right text-sm font-black text-indigo-700">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.price)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex flex-col items-end">
-                        <span className={`text-sm font-black ${profit > 0 ? 'text-emerald-600' : 'text-red-500'}`}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(profit)}</span>
-                        <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><TrendingUp className="w-3 h-3"/> {margin.toFixed(0)}%</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <button 
-                        onClick={() => toggleHighlight(p)} 
-                        className={`p-2 rounded-xl transition-all ${p.isHighlighted ? 'bg-yellow-50 text-yellow-500 shadow-sm' : 'text-slate-200 hover:text-slate-400'}`}
-                      >
-                        <Star className={`w-6 h-6 ${p.isHighlighted ? 'fill-current' : ''}`} />
-                      </button>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center gap-1">
-                        <button onClick={() => handleEdit(p)} className="p-2 text-slate-400 hover:bg-white hover:text-indigo-600 hover:shadow-sm rounded-lg transition-all"><Edit2 className="w-4 h-4"/></button>
-                        <button onClick={() => { if(confirm('Deseja excluir este item do catálogo?')) { storage.deleteProduct(p.id); onUpdate(); } }} className="p-2 text-slate-400 hover:bg-white hover:text-red-500 hover:shadow-sm rounded-lg transition-all"><Trash2 className="w-4 h-4"/></button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      {/* Mobile Card List View */}
+      <div className="lg:hidden space-y-3">
+        {products.map(p => {
+          const profit = p.price - p.productionCost;
+          const margin = p.price > 0 ? (profit / p.price) * 100 : 0;
+          return (
+            <div key={p.id} className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-4 group">
+              <div className="w-16 h-16 bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden flex items-center justify-center shrink-0">
+                {p.imageUrl ? <img src={p.imageUrl} className="w-full h-full object-cover" /> : <ImageIcon className="w-6 h-6 text-slate-200" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-bold text-slate-800 truncate">{p.name}</h4>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[11px] font-black text-indigo-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.price)}</span>
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${margin > 40 ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>+{margin.toFixed(0)}%</span>
+                </div>
+                <div className="flex gap-1 mt-1.5">
+                  {p.isHighlighted && <Star className="w-3 h-3 text-yellow-400 fill-current" />}
+                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{p.category}</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <button onClick={() => handleEdit(p)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl"><Edit2 className="w-4 h-4"/></button>
+                <button onClick={() => { if(confirm('Excluir?')) { storage.deleteProduct(p.id); onUpdate(); } }} className="p-2.5 bg-red-50 text-red-300 rounded-xl"><Trash2 className="w-4 h-4"/></button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden lg:block bg-white rounded-[32px] shadow-sm border border-slate-200 overflow-hidden">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="bg-slate-50/50 border-b border-slate-200">
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Produto</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Preço</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Margem</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {products.map(p => {
+               const profit = p.price - p.productionCost;
+               const margin = p.price > 0 ? (profit / p.price) * 100 : 0;
+               return (
+                <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 overflow-hidden shrink-0">
+                      {p.imageUrl ? <img src={p.imageUrl} className="w-full h-full object-cover" /> : <ImageIcon className="w-5 h-5 text-slate-200" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-700">{p.name}</p>
+                      <p className="text-[9px] text-slate-400 uppercase font-black">{p.category}</p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right font-black text-indigo-700">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.price)}</td>
+                  <td className="px-6 py-4 text-right">
+                    <span className={`text-[11px] font-black ${margin > 30 ? 'text-emerald-600' : 'text-amber-500'}`}>{margin.toFixed(0)}%</span>
+                  </td>
+                  <td className="px-6 py-4 flex justify-center gap-2">
+                    <button onClick={() => toggleHighlight(p)} className={`p-2 rounded-xl ${p.isHighlighted ? 'bg-yellow-50 text-yellow-500' : 'text-slate-300'}`}><Star className="w-4 h-4 fill-current"/></button>
+                    <button onClick={() => handleEdit(p)} className="p-2 text-slate-400 hover:text-indigo-600"><Edit2 className="w-4 h-4"/></button>
+                    <button onClick={() => { if(confirm('Excluir?')) { storage.deleteProduct(p.id); onUpdate(); } }} className="p-2 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4"/></button>
+                  </td>
+                </tr>
+               );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

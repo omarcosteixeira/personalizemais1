@@ -58,6 +58,23 @@ const PricingCalculator: React.FC<Props> = ({ products, onProductCreated }) => {
     setStock(storage.getStock());
   }, []);
 
+  // Persistir automaticamente os dados financeiros quando alterados
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const updatedSettings = {
+        ...storage.getSettings(),
+        financials: {
+          monthlyFixedCosts,
+          desiredMonthlySalary: desiredSalary,
+          workingDaysPerMonth: workingDays,
+          hoursPerDay
+        }
+      };
+      storage.saveSettings(updatedSettings);
+    }, 1000); // Debounce de 1 segundo para não sobrecarregar o storage
+    return () => clearTimeout(timer);
+  }, [monthlyFixedCosts, desiredSalary, workingDays, hoursPerDay]);
+
   // Calculate Hourly Rate
   const totalMonthlyNeeds = monthlyFixedCosts + desiredSalary;
   const totalMonthlyHours = workingDays * hoursPerDay;
@@ -127,18 +144,6 @@ const PricingCalculator: React.FC<Props> = ({ products, onProductCreated }) => {
       mode: PricingMode.UNIT,
       productionTime: `${productionTimeMinutes} min`
     };
-
-    // Save financial metrics for next time
-    const updatedSettings = {
-      ...settings,
-      financials: {
-        monthlyFixedCosts,
-        desiredMonthlySalary: desiredSalary,
-        workingDaysPerMonth: workingDays,
-        hoursPerDay
-      }
-    };
-    storage.saveSettings(updatedSettings);
 
     storage.saveProduct(newProduct);
     onProductCreated();

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Package, ArrowUpCircle, ArrowDownCircle, Search, AlertCircle, History } from 'lucide-react';
+import { Plus, Package, ArrowUpCircle, ArrowDownCircle, Search, AlertCircle, History, Trash2 } from 'lucide-react';
 import { Product, StockItem, StockMovement } from '../types';
 import { storage } from '../services/storageService';
 
@@ -58,6 +58,14 @@ const StockManagement: React.FC<Props> = ({ products, onUpdate }) => {
     setMoveForm({ quantity: 0, reason: '' });
     refresh();
     onUpdate();
+  };
+
+  const handleDeleteItem = (id: string) => {
+    if (confirm('Tem certeza que deseja remover este material do estoque?')) {
+      storage.deleteStockItem(id);
+      refresh();
+      onUpdate();
+    }
   };
 
   return (
@@ -134,6 +142,13 @@ const StockManagement: React.FC<Props> = ({ products, onUpdate }) => {
                           title="Saída"
                         >
                           <ArrowDownCircle className="w-5 h-5" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteItem(item.id)}
+                          className="p-2 bg-slate-50 text-slate-300 hover:text-red-500 rounded-lg transition-colors"
+                          title="Excluir Material"
+                        >
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
                     </td>

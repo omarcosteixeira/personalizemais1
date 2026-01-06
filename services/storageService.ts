@@ -176,6 +176,12 @@ export const storage = {
     syncToFirebase('stock', item.id, item);
   },
 
+  deleteStockItem: (id: string) => {
+    const stock = storage.getStock().filter(s => s.id !== id);
+    localStorage.setItem(storage.getLocalKey('stock'), JSON.stringify(stock));
+    removeFromFirebase('stock', id);
+  },
+
   getCustomFonts: (): CustomFont[] => {
     const data = localStorage.getItem(storage.getLocalKey('fonts'));
     return data ? JSON.parse(data) : [];

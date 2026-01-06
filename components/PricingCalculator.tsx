@@ -58,11 +58,12 @@ const PricingCalculator: React.FC<Props> = ({ products, onProductCreated }) => {
     setStock(storage.getStock());
   }, []);
 
-  // Persistir automaticamente os dados financeiros quando alterados
+  // Persistir automaticamente os dados financeiros quando alterados (Auto-save)
   useEffect(() => {
     const timer = setTimeout(() => {
+      const currentSettings = storage.getSettings();
       const updatedSettings = {
-        ...storage.getSettings(),
+        ...currentSettings,
         financials: {
           monthlyFixedCosts,
           desiredMonthlySalary: desiredSalary,
@@ -70,8 +71,11 @@ const PricingCalculator: React.FC<Props> = ({ products, onProductCreated }) => {
           hoursPerDay
         }
       };
-      storage.saveSettings(updatedSettings);
-    }, 1000); // Debounce de 1 segundo para não sobrecarregar o storage
+      // Só salva se houver mudança real para evitar loops
+      if (JSON.stringify(currentSettings.financials) !== JSON.stringify(updatedSettings.financials)) {
+        storage.saveSettings(updatedSettings);
+      }
+    }, 1500); // Debounce de 1.5s
     return () => clearTimeout(timer);
   }, [monthlyFixedCosts, desiredSalary, workingDays, hoursPerDay]);
 

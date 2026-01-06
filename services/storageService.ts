@@ -32,7 +32,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   financials: { monthlyFixedCosts: 1500, desiredMonthlySalary: 3000, workingDaysPerMonth: 22, hoursPerDay: 8 }
 };
 
-// Helper para obter caminho da coleção do usuário logado
 const getTenantPath = () => {
   const user = auth.currentUser;
   if (!user) throw new Error("Usuário não autenticado");
@@ -59,7 +58,6 @@ export const storage = {
     if (!user) return;
     const path = `tenants/${user.uid}`;
     
-    // Sincroniza dados específicos do usuário para LocalStorage
     const collections = [
       { k: 'products', fb: 'products' },
       { k: 'quotations', fb: 'quotations' },
@@ -80,7 +78,15 @@ export const storage = {
     }
   },
 
-  // Utilitário para chaves locais únicas por usuário
+  getPublicData: async (tenantId: string) => {
+    const path = `tenants/${tenantId}`;
+    const productsSnap = await getDocs(collection(db, `${path}/products`));
+    const products = productsSnap.docs.map(d => d.data() as Product);
+    const settingsSnap = await getDoc(doc(db, `${path}/settings`, 'global'));
+    const settings = settingsSnap.exists() ? (settingsSnap.data() as AppSettings) : DEFAULT_SETTINGS;
+    return { products, settings };
+  },
+
   getLocalKey: (key: string) => `pplus_${auth.currentUser?.uid}_${key}`,
 
   getProducts: (): Product[] => {
@@ -144,25 +150,6 @@ export const storage = {
     removeFromFirebase('customers', id);
   },
 
-  getCoupons: (): Coupon[] => {
-    const data = localStorage.getItem(storage.getLocalKey('coupons'));
-    return data ? JSON.parse(data) : [];
-  },
-
-  saveCoupon: (c: Coupon) => {
-    const cs = storage.getCoupons();
-    const idx = cs.findIndex(item => item.id === c.id);
-    if (idx >= 0) cs[idx] = c; else cs.push(c);
-    localStorage.setItem(storage.getLocalKey('coupons'), JSON.stringify(cs));
-    syncToFirebase('coupons', c.id, c);
-  },
-
-  deleteCoupon: (id: string) => {
-    const cs = storage.getCoupons().filter(c => c.id !== id);
-    localStorage.setItem(storage.getLocalKey('coupons'), JSON.stringify(cs));
-    removeFromFirebase('coupons', id);
-  },
-
   getStock: (): StockItem[] => {
     const data = localStorage.getItem(storage.getLocalKey('stock'));
     return data ? JSON.parse(data) : [];
@@ -180,6 +167,25 @@ export const storage = {
     const stock = storage.getStock().filter(s => s.id !== id);
     localStorage.setItem(storage.getLocalKey('stock'), JSON.stringify(stock));
     removeFromFirebase('stock', id);
+  },
+
+  getCoupons: (): Coupon[] => {
+    const data = localStorage.getItem(storage.getLocalKey('coupons'));
+    return data ? JSON.parse(data) : [];
+  },
+
+  saveCoupon: (c: Coupon) => {
+    const cs = storage.getCoupons();
+    const idx = cs.findIndex(item => item.id === c.id);
+    if (idx >= 0) cs[idx] = c; else cs.push(c);
+    localStorage.setItem(storage.getLocalKey('coupons'), JSON.stringify(cs));
+    syncToFirebase('coupons', c.id, c);
+  },
+
+  deleteCoupon: (id: string) => {
+    const cs = storage.getCoupons().filter(c => c.id !== id);
+    localStorage.setItem(storage.getLocalKey('coupons'), JSON.stringify(cs));
+    removeFromFirebase('coupons', id);
   },
 
   getCustomFonts: (): CustomFont[] => {

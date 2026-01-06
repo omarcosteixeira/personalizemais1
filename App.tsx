@@ -3,13 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, History, Package, LayoutDashboard, Printer, Box, ExternalLink, 
   ChevronLeft, Settings, Ticket, Users, Calculator, Layers, FileSpreadsheet, 
-  Type, ShoppingCart, Menu, LogOut, ShieldCheck, X, MoreHorizontal
+  Type, ShoppingCart, Menu, LogOut, ShieldCheck, X, MoreHorizontal, Copy
 } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './services/firebaseService';
 import { storage } from './services/storageService';
-import { Product, Quotation, StockItem } from './types';
+import { Product, Quotation, StockItem, AppSettings } from './types';
 
 // Components
 import NewQuotation from './components/NewQuotation';
@@ -44,7 +44,27 @@ const App: React.FC = () => {
   const [stock, setStock] = useState<StockItem[]>([]);
   const [duplicateTarget, setDuplicateTarget] = useState<Quotation | null>(null);
 
+  // Estados para a Loja Pública
+  const [isPublicStore, setIsPublicStore] = useState(false);
+  const [publicData, setPublicData] = useState<{ products: Product[], settings: AppSettings } | null>(null);
+
   useEffect(() => {
+    // Checa se é um acesso público à loja via URL ?store=USER_ID
+    const params = new URLSearchParams(window.location.search);
+    const storeId = params.get('store');
+    
+    if (storeId) {
+      setIsPublicStore(true);
+      storage.getPublicData(storeId).then(data => {
+        setPublicData(data);
+        setIsSyncing(false);
+      }).catch(err => {
+        console.error("Erro ao carregar loja pública", err);
+        setIsSyncing(false);
+      });
+      return;
+    }
+
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       setIsSyncing(true);
       if (fbUser) {
@@ -92,7 +112,12 @@ const App: React.FC = () => {
     });
   };
 
-  if (userStatus !== 'APPROVED') {
+  // Renderiza Loja Pública se detectada
+  if (isPublicStore && publicData) {
+    return <Storefront products={publicData.products} />;
+  }
+
+  if (userStatus !== 'APPROVED' && !isPublicStore) {
     return <LoginPage userStatus={userStatus} onAuthChange={() => {}} />;
   }
 
@@ -100,7 +125,7 @@ const App: React.FC = () => {
     return (
       <div className="relative h-screen overflow-hidden">
         <button onClick={() => setActiveTab('dashboard')} className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-indigo-900 text-white px-6 py-4 rounded-full shadow-2xl flex items-center gap-2 hover:scale-105 transition-all lg:bottom-8 lg:left-auto lg:right-8 lg:translate-x-0">
-          <ChevronLeft className="w-6 h-6" /> Painel de Controle
+          <ChevronLeft className="w-6 h-6" /> Voltar ao Painel
         </button>
         <div className="h-full overflow-y-auto">
           <Storefront products={products} />
@@ -179,7 +204,7 @@ const App: React.FC = () => {
             <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Atalhos Externos</p>
           </div>
           <button onClick={() => setActiveTab('store')} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-emerald-300 hover:bg-indigo-800 transition-colors">
-            <ExternalLink className="w-5 h-5" /> Abrir Loja Online
+            <ExternalLink className="w-5 h-5" /> Ver Minha Loja
           </button>
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-300 hover:bg-indigo-800 mt-auto transition-colors">
             <LogOut className="w-5 h-5" /> Sair da Conta

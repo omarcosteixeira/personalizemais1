@@ -3,12 +3,8 @@ import React, { useState } from 'react';
 import { 
   Sparkles, 
   Image as ImageIcon, 
-  Type, 
   Send, 
   Download, 
-  RefreshCw, 
-  ShoppingCart, 
-  X,
   Zap,
   Layout,
   Instagram,
@@ -16,7 +12,10 @@ import {
   Copy,
   Check,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Key,
+  Info,
+  ExternalLink
 } from 'lucide-react';
 import { Product } from '../types';
 import { storage } from '../services/storageService';
@@ -45,6 +44,18 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleOpenKeySelector = async () => {
+    try {
+      const aistudio = (window as any).aistudio;
+      if (aistudio && typeof aistudio.openSelectKey === 'function') {
+        await aistudio.openSelectKey();
+        setError(null);
+      }
+    } catch (err) {
+      console.error("Erro ao abrir seletor de chaves:", err);
+    }
+  };
+
   const generatePromotionalArt = async () => {
     setIsGenerating(true);
     setError(null);
@@ -56,36 +67,29 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
     const productPrice = product ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.price) : "";
 
     try {
-      // 1. Verificar Key (Sistema Interno de Seleção)
+      // Regra Obrigatória Gemini 3 Pro: Verificar seleção de chave
       const aistudio = (window as any).aistudio;
       if (aistudio) {
         const hasKey = await aistudio.hasSelectedApiKey();
-        if (!hasKey) await aistudio.openSelectKey();
+        if (!hasKey) {
+          await aistudio.openSelectKey();
+        }
       }
 
+      // Inicializa com a chave mais recente disponível no ambiente
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-      // 2. Gerar Texto Persuasivo (Copy)
-      const textPrompt = `Aja como um especialista em marketing para gráficas rápidas. 
-      Crie uma legenda persuasiva de Instagram para o produto: ${productName}.
-      Objetivo: ${objective === 'PROMO' ? 'Promoção Imperdível' : objective === 'NEW' ? 'Lançamento' : objective === 'URGENT' ? 'Últimas unidades' : 'Fortalecer marca'}.
-      Preço de referência: ${productPrice}. 
-      Inclua emojis, hashtags relevantes e um Call to Action para o WhatsApp ${settings.phone}. 
-      Mantenha um tom profissional, porém amigável.`;
-
+      // 1. Gerar Roteiro de Vendas (Flash)
+      const textPrompt = `Aja como um especialista em copy para gráficas. Crie uma legenda de Instagram para o produto: ${productName}. Objetivo: ${objective}. Preço: ${productPrice}. Inclua emojis e CTA para o WhatsApp ${settings.phone}.`;
+      
       const textResponse = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: textPrompt,
       });
       setGeneratedCopy(textResponse.text || "");
 
-      // 3. Gerar Imagem da Arte (Pro)
-      const imagePrompt = `Crie uma arte publicitária profissional de alta qualidade para uma gráfica rápida. 
-      O foco deve ser o produto: ${productName}. 
-      Ambiente: Estúdio fotográfico minimalista com cores modernas (tons de ${settings.theme.primaryColor}). 
-      Estilo: Fotografia comercial premium, iluminação dramática, composição centrada, alta fidelidade. 
-      Contexto: ${objective === 'PROMO' ? 'Banner de oferta' : 'Exibição de produto de luxo'}. 
-      Não adicione textos ilegíveis, foque no realismo do material gráfico.`;
+      // 2. Gerar Arte Visual (Pro Image)
+      const imagePrompt = `Crie uma imagem de anúncio publicitário profissional para uma gráfica. Produto: ${productName}. Ambiente: Estúdio fotográfico minimalista, luz suave, cores modernas (predomínio de ${settings.theme.primaryColor}). Estilo: Fotografia comercial premium, 8k, realista, foco total no produto. Sem textos escritos.`;
 
       const imageResponse = await ai.models.generateContent({
         model: 'gemini-3-pro-image-preview',
@@ -99,17 +103,26 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
       });
 
       if (imageResponse.candidates?.[0]?.content?.parts) {
+        let found = false;
         for (const part of imageResponse.candidates[0].content.parts) {
           if (part.inlineData) {
             setGeneratedArt(`data:image/png;base64,${part.inlineData.data}`);
+            found = true;
             break;
           }
         }
+        if (!found) setError("A IA não conseguiu gerar a imagem. Verifique as restrições da sua conta Gemini.");
       }
 
     } catch (err: any) {
-      console.error(err);
-      setError("Houve um erro na geração. Verifique sua conexão ou chave de API.");
+      console.error("Erro na API Gemini:", err);
+      const msg = err.message || "";
+      
+      if (msg.includes("Requested entity was not found") || msg.includes("API_KEY")) {
+        setError("Erro de Autenticação: Sua chave de API não foi reconhecida ou não tem saldo. Por favor, utilize o seletor abaixo para validar uma chave de um projeto pago.");
+      } else {
+        setError(`Erro na geração: ${msg || "Verifique sua conexão e saldo da API Google."}`);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -119,7 +132,7 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
     if (!generatedArt) return;
     const link = document.createElement('a');
     link.href = generatedArt;
-    link.download = `arte-promocional-${Date.now()}.png`;
+    link.download = `arte-ia-grafica-${Date.now()}.png`;
     link.click();
   };
 
@@ -127,7 +140,7 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex flex-col lg:grid lg:grid-cols-12 gap-8">
         
-        {/* Painel de Controle (Esquerda) */}
+        {/* Painel de Configuração */}
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-200">
             <h3 className="text-xl font-black text-slate-800 flex items-center gap-3 mb-6">
@@ -136,13 +149,13 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
 
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecione o Produto</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Qual o Produto?</label>
                 <select 
                   value={selectedProductId}
                   onChange={e => setSelectedProductId(e.target.value)}
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none"
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="">Produto Genérico / Gráfica</option>
+                  <option value="">Serviços Gerais / Gráfica</option>
                   {products.map(p => (
                     <option key={p.id} value={p.id}>{p.name} - R$ {p.price}</option>
                   ))}
@@ -150,12 +163,12 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Objetivo da Campanha</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Post</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: 'PROMO', label: 'Promoção', icon: Zap },
-                    { id: 'NEW', label: 'Lançamento', icon: Sparkles },
-                    { id: 'BRAND', label: 'Institucional', icon: Layout },
+                    { id: 'NEW', label: 'Novidade', icon: Sparkles },
+                    { id: 'BRAND', label: 'Marca', icon: Layout },
                     { id: 'URGENT', label: 'Urgente', icon: AlertCircle },
                   ].map(opt => (
                     <button 
@@ -171,27 +184,30 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Formato da Arte</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Formato</label>
                 <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl">
-                  <button 
-                    onClick={() => setFormat('1:1')}
-                    className={`flex-1 py-3 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 transition-all ${format === '1:1' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}
-                  >
-                    <Instagram className="w-4 h-4" /> POST (1:1)
+                  <button onClick={() => setFormat('1:1')} className={`flex-1 py-3 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 transition-all ${format === '1:1' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}>
+                    <Instagram className="w-4 h-4" /> POST
                   </button>
-                  <button 
-                    onClick={() => setFormat('9:16')}
-                    className={`flex-1 py-3 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 transition-all ${format === '9:16' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}
-                  >
-                    <Smartphone className="w-4 h-4" /> STORY (9:16)
+                  <button onClick={() => setFormat('9:16')} className={`flex-1 py-3 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 transition-all ${format === '9:16' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}>
+                    <Smartphone className="w-4 h-4" /> STORY
                   </button>
                 </div>
               </div>
 
               {error && (
-                <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 text-red-600 text-xs">
-                  <AlertCircle className="w-5 h-5 shrink-0" />
-                  <p>{error}</p>
+                <div className="p-4 bg-red-50 border border-red-100 rounded-2xl space-y-3 animate-in slide-in-from-top-2">
+                  <div className="flex items-start gap-3 text-red-600 text-[11px] font-bold">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <p>{error}</p>
+                  </div>
+                  <button 
+                    onClick={handleOpenKeySelector}
+                    className="w-full py-3 bg-white border-2 border-red-200 text-red-600 rounded-xl text-[10px] font-black uppercase hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Key className="w-4 h-4" /> Selecionar Chave Paga (AI Studio)
+                  </button>
+                  <p className="text-center text-[9px] text-slate-400 italic">Certifique-se de que a chave tenha faturamento ativo.</p>
                 </div>
               )}
 
@@ -200,62 +216,45 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
                 disabled={isGenerating}
                 className={`w-full py-5 rounded-3xl font-black text-white shadow-xl flex items-center justify-center gap-3 transition-all active:scale-95 ${isGenerating ? 'bg-slate-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'}`}
               >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    CRIANDO MÁGICA...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-5 h-5" />
-                    GERAR CONTEÚDO IA
-                  </>
-                )}
+                {isGenerating ? <><Loader2 className="w-5 h-5 animate-spin" /> GERANDO...</> : <><Zap className="w-5 h-5" /> CRIAR CAMPANHA IA</>}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Canvas de Visualização (Direita) */}
+        {/* Painel de Visualização */}
         <div className="lg:col-span-8 space-y-6">
           <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-200 min-h-[600px] flex flex-col">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Visualização do Anúncio</h4>
             
             <div className="flex-1 flex flex-col md:flex-row gap-8">
-              {/* Arte Visual */}
-              <div className="flex-1 space-y-4">
-                <div className={`aspect-${format === '1:1' ? 'square' : '[9/16]'} bg-slate-50 rounded-[32px] border-2 border-slate-100 overflow-hidden relative flex items-center justify-center shadow-inner group`}>
+              <div className="flex-1">
+                <div className={`aspect-${format === '1:1' ? 'square' : '[9/16]'} bg-slate-50 rounded-[32px] border-2 border-slate-100 overflow-hidden relative flex items-center justify-center group shadow-inner`}>
                    {isGenerating ? (
                      <div className="text-center p-8 space-y-4 animate-pulse">
-                        <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto">
-                          <ImageIcon className="w-8 h-8 text-indigo-600" />
-                        </div>
-                        <p className="text-xs font-black text-indigo-900 uppercase">Processando Imagem...</p>
+                        <ImageIcon className="w-12 h-12 text-indigo-200 mx-auto" />
+                        <p className="text-[10px] font-black text-indigo-900 uppercase">A IA está criando sua arte...</p>
                      </div>
                    ) : generatedArt ? (
                      <>
                         <img src={generatedArt} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                           <button 
-                             onClick={downloadImage}
-                             className="px-6 py-3 bg-white text-slate-800 font-bold rounded-2xl flex items-center gap-2 shadow-2xl hover:scale-105 transition-all"
-                           >
+                           <button onClick={downloadImage} className="px-6 py-3 bg-white text-slate-800 font-bold rounded-2xl flex items-center gap-2 shadow-2xl hover:scale-105 transition-all">
                              <Download className="w-5 h-5" /> Baixar Imagem
                            </button>
                         </div>
                      </>
                    ) : (
-                     <div className="text-center opacity-30">
-                        <ImageIcon className="w-12 h-12 mx-auto mb-3" />
-                        <p className="text-xs font-bold">Sua arte aparecerá aqui</p>
+                     <div className="text-center opacity-20">
+                        <ImageIcon className="w-16 h-16 mx-auto mb-2" />
+                        <p className="text-xs font-bold">A arte publicitária será exibida aqui</p>
                      </div>
                    )}
                 </div>
               </div>
 
-              {/* Texto Persuasivo */}
               <div className="md:w-72 flex flex-col space-y-4">
-                <div className="flex-1 p-6 bg-slate-50 rounded-3xl border border-slate-100 relative overflow-hidden flex flex-col">
+                <div className="flex-1 p-6 bg-slate-50 rounded-3xl border border-slate-100 relative flex flex-col overflow-hidden">
                   <div className="flex justify-between items-center mb-4">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Legenda Sugerida</p>
                     {generatedCopy && (
@@ -264,47 +263,22 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
                       </button>
                     )}
                   </div>
-                  
-                  <div className="flex-1 text-xs text-slate-600 leading-relaxed overflow-y-auto max-h-96 whitespace-pre-wrap no-scrollbar">
-                    {isGenerating ? (
-                      <div className="space-y-3">
-                        <div className="h-3 bg-slate-200 rounded-full w-full animate-pulse"></div>
-                        <div className="h-3 bg-slate-200 rounded-full w-5/6 animate-pulse"></div>
-                        <div className="h-3 bg-slate-200 rounded-full w-4/6 animate-pulse"></div>
-                      </div>
-                    ) : generatedCopy ? (
-                      generatedCopy
-                    ) : (
-                      <p className="text-slate-300 italic">O roteiro de vendas será gerado automaticamente.</p>
-                    )}
+                  <div className="flex-1 text-xs text-slate-600 leading-relaxed overflow-y-auto whitespace-pre-wrap no-scrollbar">
+                    {isGenerating ? "Criando copy persuasiva..." : (generatedCopy || "O texto da legenda será gerado automaticamente pela IA.")}
                   </div>
                 </div>
 
                 <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center gap-3">
-                   <div className="p-2 bg-white rounded-lg"><Smartphone className="w-4 h-4 text-indigo-600" /></div>
-                   <p className="text-[10px] font-bold text-indigo-900 leading-tight">Pronto para publicar no Instagram e WhatsApp.</p>
+                   <Info className="w-5 h-5 text-indigo-600 shrink-0" />
+                   <div className="flex-1">
+                     <p className="text-[10px] font-black text-indigo-900 uppercase leading-none mb-1">Nota</p>
+                     <p className="text-[9px] text-indigo-700 leading-tight">Para o **Gemini 3 Pro Image**, é recomendável utilizar uma conta do Google Cloud com faturamento ativado.</p>
+                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Dicas de Marketing */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[
-          { title: "Consistência Visual", desc: "A IA usa as cores da sua marca configuradas nos ajustes para manter sua identidade.", icon: Layout },
-          { title: "Copywriting de Elite", desc: "Os textos utilizam gatilhos mentais de escassez e autoridade para converter mais.", icon: Type },
-          { title: "Alta Performance", desc: "Artes geradas em 1K com realismo fotográfico aumentam a percepção de valor.", icon: Smartphone }
-        ].map((dica, i) => (
-          <div key={i} className="bg-white p-6 rounded-3xl border border-slate-200 flex items-start gap-4 shadow-sm">
-             <div className="p-3 bg-slate-50 rounded-2xl"><dica.icon className="w-5 h-5 text-indigo-600" /></div>
-             <div>
-               <h5 className="font-bold text-slate-800 text-sm mb-1">{dica.title}</h5>
-               <p className="text-xs text-slate-500 leading-relaxed">{dica.desc}</p>
-             </div>
-          </div>
-        ))}
       </div>
     </div>
   );

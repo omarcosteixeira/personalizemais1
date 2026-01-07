@@ -39,7 +39,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [userStatus, setUserStatus] = useState<'GUEST' | 'PENDING' | 'EXPIRED' | 'APPROVED'>('GUEST');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   
@@ -70,7 +70,6 @@ const App: React.FC = () => {
     }
 
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
-      setIsSyncing(true);
       if (fbUser) {
         setUser(fbUser);
         const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
@@ -84,8 +83,25 @@ const App: React.FC = () => {
             setUserStatus('EXPIRED');
           } else {
             setUserStatus('APPROVED');
-            await storage.initSync();
-            refreshData();
+            
+            // ESTRATÉGIA CACHE-FIRST:
+            // 1. Carrega dados locais imediatamente para evitar tela vazia
+            setProducts(storage.getProducts());
+            setQuotations(storage.getQuotations());
+            setStock(storage.getStock());
+
+            // 2. Inicia sincronização em background sem travar o UI
+            setIsSyncing(true);
+            storage.initSync().then(() => {
+              // 3. Atualiza os estados quando os dados novos chegarem do servidor
+              setProducts(storage.getProducts());
+              setQuotations(storage.getQuotations());
+              setStock(storage.getStock());
+              setIsSyncing(false);
+            }).catch(err => {
+              console.error("Erro na sincronização:", err);
+              setIsSyncing(false);
+            });
           }
         }
       } else {
@@ -93,7 +109,6 @@ const App: React.FC = () => {
         setUserStatus('GUEST');
         setIsAdmin(false);
       }
-      setIsSyncing(false);
     });
     return unsub;
   }, []);

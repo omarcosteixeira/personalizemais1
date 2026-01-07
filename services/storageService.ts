@@ -72,16 +72,20 @@ export const storage = {
       { k: 'coupons', fb: 'coupons' }
     ];
 
-    for (const col of collections) {
+    // Otimização: Executa todas as buscas em paralelo para máxima velocidade
+    const syncTasks = collections.map(async (col) => {
       const snap = await getDocs(collection(db, `${path}/${col.fb}`));
       const data = snap.docs.map(d => d.data());
       localStorage.setItem(`pplus_${user.uid}_${col.k}`, JSON.stringify(data));
-    }
+    });
 
-    const settingsSnap = await getDoc(doc(db, `${path}/settings`, 'global'));
-    if (settingsSnap.exists()) {
-      localStorage.setItem(`pplus_${user.uid}_settings`, JSON.stringify(settingsSnap.data()));
-    }
+    const settingsTask = getDoc(doc(db, `${path}/settings`, 'global')).then(settingsSnap => {
+      if (settingsSnap.exists()) {
+        localStorage.setItem(`pplus_${user.uid}_settings`, JSON.stringify(settingsSnap.data()));
+      }
+    });
+
+    await Promise.all([...syncTasks, settingsTask]);
   },
 
   getSystemConfig: async (): Promise<SystemConfig> => {

@@ -53,6 +53,7 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
       }
     } catch (err) {
       console.error("Erro ao abrir seletor de chaves:", err);
+      setError("Não foi possível abrir o seletor de chaves. Recarregue a página.");
     }
   };
 
@@ -67,20 +68,24 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
     const productPrice = product ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.price) : "";
 
     try {
-      // Regra Obrigatória Gemini 3 Pro: Verificar seleção de chave
+      // 1. Verificar se a chave está configurada no ambiente
+      const apiKey = process.env.API_KEY;
+      
       const aistudio = (window as any).aistudio;
-      if (aistudio) {
-        const hasKey = await aistudio.hasSelectedApiKey();
-        if (!hasKey) {
-          await aistudio.openSelectKey();
-        }
+      const hasKeySelected = aistudio ? await aistudio.hasSelectedApiKey() : false;
+
+      if (!apiKey || apiKey.trim() === "" || !hasKeySelected) {
+        setError("Chave de API não configurada. Por favor, clique em 'Selecionar Chave' para autorizar o uso da IA.");
+        if (aistudio) await aistudio.openSelectKey();
+        setIsGenerating(false);
+        return;
       }
 
-      // Inicializa com a chave mais recente disponível no ambiente
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      // 2. Inicializar a IA com a chave validada
+      const ai = new GoogleGenAI({ apiKey: apiKey });
 
-      // 1. Gerar Roteiro de Vendas (Flash)
-      const textPrompt = `Aja como um especialista em copy para gráficas. Crie uma legenda de Instagram para o produto: ${productName}. Objetivo: ${objective}. Preço: ${productPrice}. Inclua emojis e CTA para o WhatsApp ${settings.phone}.`;
+      // 3. Gerar Roteiro de Vendas (Flash)
+      const textPrompt = `Aja como um especialista em marketing para gráficas rápidas. Crie uma legenda persuasiva para Instagram para o produto: ${productName}. Objetivo: ${objective}. Preço: ${productPrice}. Inclua emojis e CTA para o WhatsApp ${settings.phone}.`;
       
       const textResponse = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
@@ -88,8 +93,8 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
       });
       setGeneratedCopy(textResponse.text || "");
 
-      // 2. Gerar Arte Visual (Pro Image)
-      const imagePrompt = `Crie uma imagem de anúncio publicitário profissional para uma gráfica. Produto: ${productName}. Ambiente: Estúdio fotográfico minimalista, luz suave, cores modernas (predomínio de ${settings.theme.primaryColor}). Estilo: Fotografia comercial premium, 8k, realista, foco total no produto. Sem textos escritos.`;
+      // 4. Gerar Arte Visual (Pro Image)
+      const imagePrompt = `Publicidade profissional para gráfica: ${productName}. Mockup realista em fundo elegante, iluminação suave de estúdio, tons de ${settings.theme.primaryColor}. Qualidade fotográfica comercial, 8k, ultra detalhado. Sem textos na imagem.`;
 
       const imageResponse = await ai.models.generateContent({
         model: 'gemini-3-pro-image-preview',
@@ -111,17 +116,17 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
             break;
           }
         }
-        if (!found) setError("A IA não conseguiu gerar a imagem. Verifique as restrições da sua conta Gemini.");
+        if (!found) setError("A IA gerou o texto, mas não conseguiu criar a imagem. Tente novamente.");
       }
 
     } catch (err: any) {
       console.error("Erro na API Gemini:", err);
       const msg = err.message || "";
       
-      if (msg.includes("Requested entity was not found") || msg.includes("API_KEY")) {
-        setError("Erro de Autenticação: Sua chave de API não foi reconhecida ou não tem saldo. Por favor, utilize o seletor abaixo para validar uma chave de um projeto pago.");
+      if (msg.includes("API key") || msg.includes("Requested entity was not found")) {
+        setError("Chave Inválida ou Sem Saldo. Certifique-se de selecionar uma chave 'AIza...' de um projeto com faturamento ativo.");
       } else {
-        setError(`Erro na geração: ${msg || "Verifique sua conexão e saldo da API Google."}`);
+        setError(`Ocorreu um problema: ${msg || "Verifique sua conexão e tente novamente."}`);
       }
     } finally {
       setIsGenerating(false);
@@ -132,7 +137,7 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
     if (!generatedArt) return;
     const link = document.createElement('a');
     link.href = generatedArt;
-    link.download = `arte-ia-grafica-${Date.now()}.png`;
+    link.download = `campanha-ia-${Date.now()}.png`;
     link.click();
   };
 
@@ -140,22 +145,22 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex flex-col lg:grid lg:grid-cols-12 gap-8">
         
-        {/* Painel de Configuração */}
+        {/* Painel lateral de opções */}
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-200">
             <h3 className="text-xl font-black text-slate-800 flex items-center gap-3 mb-6">
-              <Sparkles className="w-6 h-6 text-indigo-600" /> Criador de Arte IA
+              <Sparkles className="w-6 h-6 text-indigo-600" /> Criador de Conteúdo IA
             </h3>
 
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Qual o Produto?</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Produto da Campanha</label>
                 <select 
                   value={selectedProductId}
                   onChange={e => setSelectedProductId(e.target.value)}
                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="">Serviços Gerais / Gráfica</option>
+                  <option value="">Serviços Gerais</option>
                   {products.map(p => (
                     <option key={p.id} value={p.id}>{p.name} - R$ {p.price}</option>
                   ))}
@@ -163,12 +168,12 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Post</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Objetivo</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: 'PROMO', label: 'Promoção', icon: Zap },
-                    { id: 'NEW', label: 'Novidade', icon: Sparkles },
-                    { id: 'BRAND', label: 'Marca', icon: Layout },
+                    { id: 'NEW', label: 'Lançamento', icon: Sparkles },
+                    { id: 'BRAND', label: 'Institucional', icon: Layout },
                     { id: 'URGENT', label: 'Urgente', icon: AlertCircle },
                   ].map(opt => (
                     <button 
@@ -205,9 +210,8 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
                     onClick={handleOpenKeySelector}
                     className="w-full py-3 bg-white border-2 border-red-200 text-red-600 rounded-xl text-[10px] font-black uppercase hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
                   >
-                    <Key className="w-4 h-4" /> Selecionar Chave Paga (AI Studio)
+                    <Key className="w-4 h-4" /> Selecionar Chave Válida
                   </button>
-                  <p className="text-center text-[9px] text-slate-400 italic">Certifique-se de que a chave tenha faturamento ativo.</p>
                 </div>
               )}
 
@@ -216,16 +220,16 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
                 disabled={isGenerating}
                 className={`w-full py-5 rounded-3xl font-black text-white shadow-xl flex items-center justify-center gap-3 transition-all active:scale-95 ${isGenerating ? 'bg-slate-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'}`}
               >
-                {isGenerating ? <><Loader2 className="w-5 h-5 animate-spin" /> GERANDO...</> : <><Zap className="w-5 h-5" /> CRIAR CAMPANHA IA</>}
+                {isGenerating ? <><Loader2 className="w-5 h-5 animate-spin" /> CRIANDO...</> : <><Zap className="w-5 h-5" /> GERAR COM INTELIGÊNCIA ARTIFICIAL</>}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Painel de Visualização */}
+        {/* Visualização do resultado */}
         <div className="lg:col-span-8 space-y-6">
           <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-200 min-h-[600px] flex flex-col">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Visualização do Anúncio</h4>
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Prévia do Anúncio</h4>
             
             <div className="flex-1 flex flex-col md:flex-row gap-8">
               <div className="flex-1">
@@ -233,7 +237,7 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
                    {isGenerating ? (
                      <div className="text-center p-8 space-y-4 animate-pulse">
                         <ImageIcon className="w-12 h-12 text-indigo-200 mx-auto" />
-                        <p className="text-[10px] font-black text-indigo-900 uppercase">A IA está criando sua arte...</p>
+                        <p className="text-[10px] font-black text-indigo-900 uppercase">Processando arte e texto...</p>
                      </div>
                    ) : generatedArt ? (
                      <>
@@ -247,7 +251,7 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
                    ) : (
                      <div className="text-center opacity-20">
                         <ImageIcon className="w-16 h-16 mx-auto mb-2" />
-                        <p className="text-xs font-bold">A arte publicitária será exibida aqui</p>
+                        <p className="text-xs font-bold">Sua arte aparecerá aqui</p>
                      </div>
                    )}
                 </div>
@@ -264,15 +268,14 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
                     )}
                   </div>
                   <div className="flex-1 text-xs text-slate-600 leading-relaxed overflow-y-auto whitespace-pre-wrap no-scrollbar">
-                    {isGenerating ? "Criando copy persuasiva..." : (generatedCopy || "O texto da legenda será gerado automaticamente pela IA.")}
+                    {isGenerating ? "Escrevendo roteiro..." : (generatedCopy || "A legenda para o post será gerada aqui.")}
                   </div>
                 </div>
 
                 <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center gap-3">
                    <Info className="w-5 h-5 text-indigo-600 shrink-0" />
                    <div className="flex-1">
-                     <p className="text-[10px] font-black text-indigo-900 uppercase leading-none mb-1">Nota</p>
-                     <p className="text-[9px] text-indigo-700 leading-tight">Para o **Gemini 3 Pro Image**, é recomendável utilizar uma conta do Google Cloud com faturamento ativado.</p>
+                     <p className="text-[9px] text-indigo-700 leading-tight font-bold">Use sua chave do Google AI Studio para gerar artes ilimitadas e profissionais.</p>
                    </div>
                 </div>
               </div>

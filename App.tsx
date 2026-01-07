@@ -35,7 +35,7 @@ type Tab = 'dashboard' | 'new' | 'history' | 'products' | 'store' | 'settings' |
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
-  const [productSubTab, setProductSubTab] = useState<'catalog' | 'pricing' | 'stock' | 'sheet' | 'promotional_ai'>('catalog');
+  const [productSubTab, setProductSubTab] = useState<'catalog' | 'pricing' | 'stock' | 'sheet'>('catalog');
   const [user, setUser] = useState<any>(null);
   const [userStatus, setUserStatus] = useState<'GUEST' | 'PENDING' | 'EXPIRED' | 'APPROVED'>('GUEST');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -85,15 +85,12 @@ const App: React.FC = () => {
             setUserStatus('APPROVED');
             
             // ESTRATÉGIA CACHE-FIRST:
-            // 1. Carrega dados locais imediatamente para evitar tela vazia
             setProducts(storage.getProducts());
             setQuotations(storage.getQuotations());
             setStock(storage.getStock());
 
-            // 2. Inicia sincronização em background sem travar o UI
             setIsSyncing(true);
             storage.initSync().then(() => {
-              // 3. Atualiza os estados quando os dados novos chegarem do servidor
               setProducts(storage.getProducts());
               setQuotations(storage.getQuotations());
               setStock(storage.getStock());
@@ -132,17 +129,14 @@ const App: React.FC = () => {
     });
   };
 
-  // Renderiza Loja Pública se detectada
   if (isPublicStore && publicData) {
     return <Storefront products={publicData.products} />;
   }
 
-  // Se o usuário não está aprovado e não quer o login, mostra a Landing Page
   if (userStatus === 'GUEST' && !showLogin) {
     return <LandingPage onStart={() => setShowLogin(true)} />;
   }
 
-  // Mostra a tela de login/expirado/pendente se necessário
   if (userStatus !== 'APPROVED' && !isPublicStore) {
     return <LoginPage userStatus={userStatus} onAuthChange={() => {}} />;
   }
@@ -177,7 +171,6 @@ const App: React.FC = () => {
                 {id:'pricing',l:'Precificação',i:Calculator},
                 {id:'sheet',l:'Folhas',i:FileSpreadsheet},
                 {id:'stock',l:'Estoque',i:Box},
-                {id:'promotional_ai',l:'Arte IA',i:Sparkles}
               ].map(sub => (
                 <button key={sub.id} onClick={() => setProductSubTab(sub.id as any)} className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 whitespace-nowrap transition-all ${productSubTab === sub.id ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}>
                   <sub.i className="w-4 h-4" /> {sub.l}
@@ -188,7 +181,6 @@ const App: React.FC = () => {
             {productSubTab === 'pricing' && <PricingCalculator products={products} onProductCreated={refreshData} />}
             {productSubTab === 'stock' && <StockManagement products={products} onUpdate={refreshData} />}
             {productSubTab === 'sheet' && <SheetCalculator />}
-            {productSubTab === 'promotional_ai' && <PromotionalAI products={products} />}
           </div>
         );
       case 'fonts': return <FontTester />;

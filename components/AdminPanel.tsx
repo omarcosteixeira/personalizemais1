@@ -15,6 +15,8 @@ const AdminPanel: React.FC = () => {
   const [sysConfig, setSysConfig] = useState<SystemConfig>({
     basicPlanPrice: 0,
     proPlanPrice: 0,
+    basicPlanPaymentLink: '',
+    proPlanPaymentLink: '',
     paymentLink: ''
   });
 
@@ -163,17 +165,33 @@ const AdminPanel: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase">Link de Pagamento (Mercado Pago / Outros)</label>
-                <div className="relative">
-                  <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                  <input 
-                    type="text" 
-                    value={sysConfig.paymentLink} 
-                    onChange={e => setSysConfig({...sysConfig, paymentLink: e.target.value})}
-                    placeholder="https://link-de-pagamento.com"
-                    className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl font-medium" 
-                  />
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase">Link de Pagamento Plano Básico</label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                    <input 
+                      type="text" 
+                      value={sysConfig.basicPlanPaymentLink} 
+                      onChange={e => setSysConfig({...sysConfig, basicPlanPaymentLink: e.target.value})}
+                      placeholder="https://link-plano-basico.com"
+                      className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl font-medium" 
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase">Link de Pagamento Plano Pro</label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                    <input 
+                      type="text" 
+                      value={sysConfig.proPlanPaymentLink} 
+                      onChange={e => setSysConfig({...sysConfig, proPlanPaymentLink: e.target.value})}
+                      placeholder="https://link-plano-pro.com"
+                      className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl font-medium" 
+                    />
+                  </div>
                 </div>
               </div>
 

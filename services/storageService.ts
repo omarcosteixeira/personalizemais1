@@ -1,5 +1,5 @@
 
-import { Product, Quotation, StockItem, StockMovement, AppSettings, Coupon, Customer, CustomFont, SystemConfig } from '../types';
+import { Product, Quotation, StockItem, StockMovement, AppSettings, Coupon, Customer, CustomFont, SystemConfig, PayableAccount } from '../types';
 import { db, auth } from './firebaseService';
 import { 
   collection, doc, setDoc, getDocs, deleteDoc, getDoc, query, orderBy 
@@ -35,6 +35,8 @@ const DEFAULT_SETTINGS: AppSettings = {
 const DEFAULT_SYSTEM_CONFIG: SystemConfig = {
   basicPlanPrice: 49.90,
   proPlanPrice: 89.90,
+  basicPlanPaymentLink: 'https://mpago.la/basico',
+  proPlanPaymentLink: 'https://mpago.la/pro',
   paymentLink: 'https://mpago.la/exemplo'
 };
 
@@ -69,10 +71,10 @@ export const storage = {
       { k: 'quotations', fb: 'quotations' },
       { k: 'stock', fb: 'stock' },
       { k: 'customers', fb: 'customers' },
-      { k: 'coupons', fb: 'coupons' }
+      { k: 'coupons', fb: 'coupons' },
+      { k: 'payables', fb: 'payables' }
     ];
 
-    // Otimização: Executa todas as buscas em paralelo para máxima velocidade
     const syncTasks = collections.map(async (col) => {
       const snap = await getDocs(collection(db, `${path}/${col.fb}`));
       const data = snap.docs.map(d => d.data());
@@ -98,6 +100,25 @@ export const storage = {
 
   saveSystemConfig: async (config: SystemConfig) => {
     await setDoc(doc(db, 'system', 'config'), config);
+  },
+
+  getPayables: (): PayableAccount[] => {
+    const data = localStorage.getItem(storage.getLocalKey('payables'));
+    return data ? JSON.parse(data) : [];
+  },
+
+  savePayable: (p: PayableAccount) => {
+    const payables = storage.getPayables();
+    const idx = payables.findIndex(item => item.id === p.id);
+    if (idx >= 0) payables[idx] = p; else payables.push(p);
+    localStorage.setItem(storage.getLocalKey('payables'), JSON.stringify(payables));
+    syncToFirebase('payables', p.id, p);
+  },
+
+  deletePayable: (id: string) => {
+    const payables = storage.getPayables().filter(p => p.id !== id);
+    localStorage.setItem(storage.getLocalKey('payables'), JSON.stringify(payables));
+    removeFromFirebase('payables', id);
   },
 
   getPublicData: async (tenantId: string) => {

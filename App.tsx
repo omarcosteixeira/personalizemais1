@@ -4,7 +4,7 @@ import {
   Plus, History, Package, LayoutDashboard, Printer, Box, ExternalLink, 
   ChevronLeft, Settings, Ticket, Users, Calculator, Layers, FileSpreadsheet, 
   Type, ShoppingCart, Menu, LogOut, ShieldCheck, X, MoreHorizontal, Copy,
-  Sparkles
+  Sparkles, Wallet
 } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -30,8 +30,9 @@ import LoginPage from './components/LoginPage';
 import AdminPanel from './components/AdminPanel';
 import PromotionalAI from './components/PromotionalAI';
 import LandingPage from './components/LandingPage';
+import AccountsPayable from './components/AccountsPayable';
 
-type Tab = 'dashboard' | 'new' | 'history' | 'products' | 'store' | 'settings' | 'coupons' | 'customers' | 'fonts' | 'pdv' | 'admin';
+type Tab = 'dashboard' | 'new' | 'history' | 'products' | 'store' | 'settings' | 'coupons' | 'customers' | 'fonts' | 'pdv' | 'admin' | 'finance';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -162,6 +163,7 @@ const App: React.FC = () => {
       case 'history': return <QuotationHistory quotations={quotations} onDuplicate={(q) => { setDuplicateTarget(q); setActiveTab('new'); }} />;
       case 'customers': return <CustomerManagement />;
       case 'admin': return <AdminPanel />;
+      case 'finance': return <AccountsPayable />;
       case 'products':
         return (
           <div className="space-y-4 lg:space-y-6">
@@ -195,6 +197,7 @@ const App: React.FC = () => {
     { id: 'new', label: 'Novo', icon: Plus },
     { id: 'pdv', label: 'PDV', icon: ShoppingCart },
     { id: 'history', label: 'Pedidos', icon: History },
+    { id: 'finance', label: 'Financeiro', icon: Wallet },
     { id: 'products', label: 'Produtos', icon: Layers },
     { id: 'customers', label: 'Clientes', icon: Users },
     { id: 'fonts', label: 'Fontes', icon: Type },

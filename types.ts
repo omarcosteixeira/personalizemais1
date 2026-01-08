@@ -6,11 +6,25 @@ export enum PricingMode {
 }
 
 export type OrderStatus = 'PENDING' | 'AWAITING_PAYMENT' | 'PRODUCTION' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED';
+export type PayableStatus = 'PENDING' | 'PAID' | 'OVERDUE';
 
 export interface SystemConfig {
   basicPlanPrice: number;
   proPlanPrice: number;
+  basicPlanPaymentLink: string;
+  proPlanPaymentLink: string;
   paymentLink: string;
+}
+
+export interface PayableAccount {
+  id: string;
+  description: string;
+  amount: number;
+  dueDate: string;
+  category: string;
+  status: PayableStatus;
+  paidAt?: string;
+  provider?: string;
 }
 
 export interface Product {

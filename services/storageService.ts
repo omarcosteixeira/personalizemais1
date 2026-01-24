@@ -91,9 +91,14 @@ export const storage = {
   },
 
   getSystemConfig: async (): Promise<SystemConfig> => {
-    const configSnap = await getDoc(doc(db, 'system', 'config'));
-    if (configSnap.exists()) {
-      return configSnap.data() as SystemConfig;
+    try {
+      const configSnap = await getDoc(doc(db, 'system', 'config'));
+      if (configSnap.exists()) {
+        // Mescla com defaults para garantir que novos campos existam
+        return { ...DEFAULT_SYSTEM_CONFIG, ...configSnap.data() } as SystemConfig;
+      }
+    } catch (e) {
+      console.error("Erro ao obter config do sistema:", e);
     }
     return DEFAULT_SYSTEM_CONFIG;
   },

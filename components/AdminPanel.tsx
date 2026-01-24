@@ -30,18 +30,34 @@ const AdminPanel: React.FC = () => {
   };
 
   const fetchConfig = async () => {
-    const config = await storage.getSystemConfig();
-    setSysConfig(config);
+    try {
+      const config = await storage.getSystemConfig();
+      if (config) {
+        setSysConfig(config);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar configurações:", error);
+    }
   };
 
+  // Dependência [isSuperAdmin] garante que o fetchConfig rode assim que o login for confirmado
   useEffect(() => { 
     fetchUsers();
-    if (isSuperAdmin) fetchConfig();
-  }, []);
+    if (isSuperAdmin) {
+      fetchConfig();
+    }
+  }, [isSuperAdmin]);
 
   const handleSaveConfig = async () => {
-    await storage.saveSystemConfig(sysConfig);
-    alert('Configurações de venda salvas!');
+    try {
+      await storage.saveSystemConfig(sysConfig);
+      alert('Configurações de venda salvas com sucesso!');
+      // Recarrega para garantir
+      fetchConfig();
+    } catch (error) {
+      alert('Erro ao salvar configurações.');
+      console.error(error);
+    }
   };
 
   const approveUser = async (userId: string, days: number) => {
@@ -145,9 +161,10 @@ const AdminPanel: React.FC = () => {
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                     <input 
                       type="number" 
-                      value={sysConfig.basicPlanPrice} 
-                      onChange={e => setSysConfig({...sysConfig, basicPlanPrice: parseFloat(e.target.value)})}
+                      value={sysConfig.basicPlanPrice || ''} 
+                      onChange={e => setSysConfig({...sysConfig, basicPlanPrice: parseFloat(e.target.value) || 0})}
                       className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl font-bold" 
+                      placeholder="0.00"
                     />
                   </div>
                 </div>
@@ -157,9 +174,10 @@ const AdminPanel: React.FC = () => {
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                     <input 
                       type="number" 
-                      value={sysConfig.proPlanPrice} 
-                      onChange={e => setSysConfig({...sysConfig, proPlanPrice: parseFloat(e.target.value)})}
+                      value={sysConfig.proPlanPrice || ''} 
+                      onChange={e => setSysConfig({...sysConfig, proPlanPrice: parseFloat(e.target.value) || 0})}
                       className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl font-bold" 
+                      placeholder="0.00"
                     />
                   </div>
                 </div>
@@ -172,9 +190,9 @@ const AdminPanel: React.FC = () => {
                     <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                     <input 
                       type="text" 
-                      value={sysConfig.basicPlanPaymentLink} 
+                      value={sysConfig.basicPlanPaymentLink || ''} 
                       onChange={e => setSysConfig({...sysConfig, basicPlanPaymentLink: e.target.value})}
-                      placeholder="https://link-plano-basico.com"
+                      placeholder="https://mpago.la/..."
                       className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl font-medium" 
                     />
                   </div>
@@ -186,9 +204,9 @@ const AdminPanel: React.FC = () => {
                     <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                     <input 
                       type="text" 
-                      value={sysConfig.proPlanPaymentLink} 
+                      value={sysConfig.proPlanPaymentLink || ''} 
                       onChange={e => setSysConfig({...sysConfig, proPlanPaymentLink: e.target.value})}
-                      placeholder="https://link-plano-pro.com"
+                      placeholder="https://mpago.la/..."
                       className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl font-medium" 
                     />
                   </div>

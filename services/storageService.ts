@@ -33,11 +33,11 @@ const DEFAULT_SETTINGS: AppSettings = {
 };
 
 const DEFAULT_SYSTEM_CONFIG: SystemConfig = {
-  basicPlanPrice: 49.90,
-  proPlanPrice: 89.90,
-  basicPlanPaymentLink: 'https://mpago.la/basico',
-  proPlanPaymentLink: 'https://mpago.la/pro',
-  paymentLink: 'https://mpago.la/exemplo'
+  basicPlanPrice: 0,
+  proPlanPrice: 35.00,
+  basicPlanPaymentLink: '',
+  proPlanPaymentLink: 'https://mpago.la/12vds9h',
+  paymentLink: 'https://mpago.la/12vds9h'
 };
 
 const getTenantPath = () => {

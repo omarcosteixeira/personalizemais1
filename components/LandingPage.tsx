@@ -246,22 +246,22 @@ const LandingPage: React.FC<Props> = ({ onStart }) => {
               <div className="mb-10">
                 <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] bg-indigo-50 px-4 py-2 rounded-full mb-6 inline-block">Plano Essencial</span>
                 <div className="flex items-baseline gap-2 mt-4">
-                  <span className="text-5xl font-black text-slate-800">R$ {config?.basicPlanPrice.toFixed(2) || '49,90'}</span>
-                  <span className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">/mês</span>
+                  <span className="text-5xl font-black text-slate-800">GRÁTIS</span>
+                  <span className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">/Teste 2 Dias</span>
                 </div>
               </div>
               <ul className="space-y-5 mb-12 flex-1">
-                {["Gestão de Orçamentos", "Cálculo de M² e Área", "Catálogo de Produtos", "Gerador de PDF Profissional", "Gestão de Clientes", "Financeiro Básico"].map(item => (
+                {["Acesso Completo por 48h", "Gestão de Orçamentos", "Cálculo de M² e Área", "Catálogo de Produtos", "Gerador de PDF Profissional"].map(item => (
                   <li key={item} className="flex items-center gap-4 text-sm font-bold text-slate-600">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" /> {item}
                   </li>
                 ))}
               </ul>
               <button 
-                onClick={() => window.open(config?.basicPlanPaymentLink || config?.paymentLink, '_blank')}
+                onClick={onStart}
                 className="w-full py-5 bg-slate-50 text-indigo-600 font-black rounded-3xl hover:bg-indigo-600 hover:text-white transition-all border border-indigo-100 shadow-sm uppercase tracking-widest text-xs"
               >
-                ASSINAR BÁSICO
+                CRIAR CONTA GRÁTIS
               </button>
             </div>
 
@@ -271,7 +271,7 @@ const LandingPage: React.FC<Props> = ({ onStart }) => {
               <div className="mb-10 text-white">
                 <span className="text-[10px] font-black text-indigo-100 uppercase tracking-[0.2em] bg-white/10 px-4 py-2 rounded-full mb-6 inline-block">Plano Completo</span>
                 <div className="flex items-baseline gap-2 mt-4">
-                  <span className="text-5xl font-black">R$ {config?.proPlanPrice.toFixed(2) || '89,90'}</span>
+                  <span className="text-5xl font-black">R$ {config?.proPlanPrice.toFixed(2) || '35,00'}</span>
                   <span className="text-indigo-200 font-bold uppercase text-[10px] tracking-widest">/mês</span>
                 </div>
               </div>
@@ -282,8 +282,7 @@ const LandingPage: React.FC<Props> = ({ onStart }) => {
                   "PDV de Balcão Rápido", 
                   "Controle de Estoque Pro", 
                   "Aproveitamento de Folha", 
-                  "Laboratório de Fontes .TTF",
-                  "IA de Marketing (Em breve)"
+                  "Laboratório de Fontes .TTF"
                 ].map(item => (
                   <li key={item} className="flex items-center gap-4 text-sm font-bold opacity-90">
                     <Star className="w-5 h-5 text-amber-400 fill-amber-400 shrink-0" /> {item}
@@ -294,7 +293,7 @@ const LandingPage: React.FC<Props> = ({ onStart }) => {
                 onClick={() => window.open(config?.proPlanPaymentLink || config?.paymentLink, '_blank')}
                 className="w-full py-6 bg-white text-indigo-600 font-black rounded-3xl shadow-[0_20px_50px_-10px_rgba(255,255,255,0.2)] hover:bg-amber-400 hover:text-amber-950 transition-all uppercase tracking-widest text-xs"
               >
-                ASSINAR PLANO PRO
+                ASSINAR AGORA
               </button>
             </div>
           </div>

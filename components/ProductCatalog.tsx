@@ -22,7 +22,9 @@ import {
   ChevronUp,
   ExternalLink,
   MoreVertical,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import * as XLSX from 'xlsx';
@@ -47,6 +49,7 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
   const [category, setCategory] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isHighlighted, setIsHighlighted] = useState(false);
+  const [hiddenInStore, setHiddenInStore] = useState(false);
   
   const [hasSize, setHasSize] = useState(false);
   const [availableSizes, setAvailableSizes] = useState<string[]>([]);
@@ -65,6 +68,7 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
     setCategory(''); 
     setImageUrl(''); 
     setIsHighlighted(false);
+    setHiddenInStore(false);
     setHasSize(false);
     setAvailableSizes([]);
     setHasTheme(false);
@@ -110,7 +114,7 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
     const product: Product = {
       id: editingId || Math.random().toString(36).substr(2, 9),
       name, description, price, productionCost, mode, 
-      category: category || 'Geral', imageUrl, isHighlighted,
+      category: category || 'Geral', imageUrl, isHighlighted, hiddenInStore,
       hasSize, availableSizes, hasTheme: hasSize || hasTheme, productionTime
     };
     storage.saveProduct(product);
@@ -127,6 +131,7 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
     setCategory(p.category); 
     setImageUrl(p.imageUrl || '');
     setIsHighlighted(!!p.isHighlighted); 
+    setHiddenInStore(!!p.hiddenInStore);
     setHasSize(!!p.hasSize);
     setAvailableSizes(p.availableSizes || []);
     setHasTheme(!!p.hasTheme || !!p.hasSize);
@@ -153,6 +158,7 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
       Descricao: p.description || '',
       LinkImagem: p.imageUrl || '',
       Destaque: p.isHighlighted ? 'Sim' : 'Não',
+      OcultoLoja: p.hiddenInStore ? 'Sim' : 'Não',
       TemGrade: p.hasSize ? 'Sim' : 'Não',
       Tamanhos: (p.availableSizes || []).join(', '),
       SolicitarTema: p.hasTheme ? 'Sim' : 'Não',
@@ -191,6 +197,7 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
             description: item.Descricao || '',
             imageUrl: item.LinkImagem || '',
             isHighlighted: item.Destaque === 'Sim',
+            hiddenInStore: item.OcultoLoja === 'Sim',
             hasSize: item.TemGrade === 'Sim',
             availableSizes: item.Tamanhos ? item.Tamanhos.split(',').map((s: string) => s.trim()) : [],
             hasTheme: item.SolicitarTema === 'Sim',
@@ -269,7 +276,14 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
             </div>
 
             <div className="md:col-span-4 bg-slate-50 p-4 lg:p-6 rounded-2xl border border-slate-200 space-y-4">
-              <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">Configurações Mobile</h4>
+              <div className="flex justify-between items-center">
+                <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">Configurações Avançadas</h4>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={hiddenInStore} onChange={e => setHiddenInStore(e.target.checked)} className="w-4 h-4 accent-red-600" />
+                  <label className="text-xs font-bold text-slate-500">Ocultar na Loja Online</label>
+                </div>
+              </div>
+              
               <div className="flex flex-col lg:flex-row gap-6">
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center gap-2">
@@ -326,8 +340,9 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
                   <span className="text-[11px] font-black text-indigo-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.price)}</span>
                   <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${margin > 40 ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>+{margin.toFixed(0)}%</span>
                 </div>
-                <div className="flex gap-1 mt-1.5">
+                <div className="flex gap-1 mt-1.5 items-center">
                   {p.isHighlighted && <Star className="w-3 h-3 text-yellow-400 fill-current" />}
+                  {p.hiddenInStore && <EyeOff className="w-3 h-3 text-slate-300" />}
                   <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{p.category}</span>
                 </div>
               </div>
@@ -348,6 +363,7 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
               <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Produto</th>
               <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Preço</th>
               <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Margem</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Visibilidade</th>
               <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ações</th>
             </tr>
           </thead>
@@ -370,10 +386,15 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
                   <td className="px-6 py-4 text-right">
                     <span className={`text-[11px] font-black ${margin > 30 ? 'text-emerald-600' : 'text-amber-500'}`}>{margin.toFixed(0)}%</span>
                   </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${p.hiddenInStore ? 'bg-slate-100 text-slate-400' : 'bg-emerald-50 text-emerald-600'}`}>
+                      {p.hiddenInStore ? 'Oculto' : 'Visível'}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 flex justify-center gap-2">
-                    <button onClick={() => toggleHighlight(p)} className={`p-2 rounded-xl ${p.isHighlighted ? 'bg-yellow-50 text-yellow-500' : 'text-slate-300'}`}><Star className="w-4 h-4 fill-current"/></button>
-                    <button onClick={() => handleEdit(p)} className="p-2 text-slate-400 hover:text-indigo-600"><Edit2 className="w-4 h-4"/></button>
-                    <button onClick={() => { if(confirm('Excluir?')) { storage.deleteProduct(p.id); onUpdate(); } }} className="p-2 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4"/></button>
+                    <button onClick={() => toggleHighlight(p)} className={`p-2 rounded-xl ${p.isHighlighted ? 'bg-yellow-50 text-yellow-500' : 'text-slate-300'}`} title="Destacar"><Star className="w-4 h-4 fill-current"/></button>
+                    <button onClick={() => handleEdit(p)} className="p-2 text-slate-400 hover:text-indigo-600" title="Editar"><Edit2 className="w-4 h-4"/></button>
+                    <button onClick={() => { if(confirm('Excluir?')) { storage.deleteProduct(p.id); onUpdate(); } }} className="p-2 text-slate-400 hover:text-red-500" title="Excluir"><Trash2 className="w-4 h-4"/></button>
                   </td>
                 </tr>
                );

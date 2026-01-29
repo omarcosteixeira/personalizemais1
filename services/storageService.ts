@@ -94,7 +94,6 @@ export const storage = {
     try {
       const configSnap = await getDoc(doc(db, 'system', 'config'));
       if (configSnap.exists()) {
-        // Mescla com defaults para garantir que novos campos existam
         return { ...DEFAULT_SYSTEM_CONFIG, ...configSnap.data() } as SystemConfig;
       }
     } catch (e) {
@@ -167,6 +166,12 @@ export const storage = {
     if (idx >= 0) qs[idx] = q; else qs.unshift(q);
     localStorage.setItem(storage.getLocalKey('quotations'), JSON.stringify(qs));
     syncToFirebase('quotations', q.id, q);
+  },
+
+  deleteQuotation: (id: string) => {
+    const qs = storage.getQuotations().filter(q => q.id !== id);
+    localStorage.setItem(storage.getLocalKey('quotations'), JSON.stringify(qs));
+    removeFromFirebase('quotations', id);
   },
 
   getSettings: (): AppSettings => {

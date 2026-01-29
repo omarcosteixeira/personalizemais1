@@ -33,10 +33,13 @@ const Storefront: React.FC<Props> = ({ products }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const settings = storage.getSettings();
 
-  const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category)))];
-  const highlightedProducts = products.filter(p => p.isHighlighted);
+  // Filter out hidden products first
+  const visibleProducts = products.filter(p => !p.hiddenInStore);
 
-  const filtered = products.filter(p => {
+  const categories = ['Todos', ...Array.from(new Set(visibleProducts.map(p => p.category)))];
+  const highlightedProducts = visibleProducts.filter(p => p.isHighlighted);
+
+  const filtered = visibleProducts.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;
     return matchesSearch && matchesCategory;

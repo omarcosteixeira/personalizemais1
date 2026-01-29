@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Customer, Quotation } from '../types';
 import { storage } from '../services/storageService';
-import { UserPlus, Search, Phone, FileText, MapPin, CreditCard, Trash2, X, History, User } from 'lucide-react';
+import { UserPlus, Search, Phone, FileText, MapPin, CreditCard, Trash2, X, History, User, Edit2 } from 'lucide-react';
 
 const CustomerManagement: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -10,6 +10,7 @@ const CustomerManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form states
   const [name, setName] = useState('');
@@ -24,14 +25,30 @@ const CustomerManagement: React.FC = () => {
 
   const handleSave = () => {
     if (!name || !phone) return;
+    
     const customer: Customer = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: editingId || Math.random().toString(36).substr(2, 9),
       name, phone, cpf, address,
-      createdAt: new Date().toISOString()
+      createdAt: editingId ? (customers.find(c => c.id === editingId)?.createdAt || new Date().toISOString()) : new Date().toISOString()
     };
+    
     storage.saveCustomer(customer);
     setCustomers(storage.getCustomers());
+    resetForm();
+  };
+
+  const handleEdit = (c: Customer) => {
+    setName(c.name);
+    setPhone(c.phone);
+    setCpf(c.cpf);
+    setAddress(c.address);
+    setEditingId(c.id);
+    setIsAdding(true);
+  };
+
+  const resetForm = () => {
     setIsAdding(false);
+    setEditingId(null);
     setName(''); setPhone(''); setCpf(''); setAddress('');
   };
 
@@ -91,9 +108,14 @@ const CustomerManagement: React.FC = () => {
                     <p className="text-[10px] text-slate-400 flex items-center gap-1"><MapPin className="w-3 h-3"/> {c.address ? 'Endereço Cadastrado' : 'Sem Endereço'}</p>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <button onClick={(e) => { e.stopPropagation(); if(confirm('Excluir?')) { storage.deleteCustomer(c.id); setCustomers(storage.getCustomers()); } }} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex justify-center gap-1">
+                      <button onClick={(e) => { e.stopPropagation(); handleEdit(c); }} className="p-2 text-slate-300 hover:text-indigo-600 transition-colors">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); if(confirm('Excluir?')) { storage.deleteCustomer(c.id); setCustomers(storage.getCustomers()); } }} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -107,7 +129,10 @@ const CustomerManagement: React.FC = () => {
             <div className="bg-white p-6 rounded-3xl border border-indigo-100 shadow-lg animate-in slide-in-from-right-4 duration-300">
               <div className="flex justify-between items-start mb-6">
                 <div className="bg-indigo-600 p-4 rounded-2xl text-white"><User className="w-8 h-8"/></div>
-                <button onClick={() => setSelectedCustomer(null)}><X className="text-slate-300"/></button>
+                <div className="flex gap-2">
+                  <button onClick={() => handleEdit(selectedCustomer)} className="p-2 bg-slate-50 text-indigo-600 rounded-xl hover:bg-indigo-50"><Edit2 className="w-4 h-4"/></button>
+                  <button onClick={() => setSelectedCustomer(null)} className="p-2 bg-slate-50 rounded-xl hover:bg-slate-100"><X className="w-4 h-4 text-slate-300"/></button>
+                </div>
               </div>
               <h4 className="text-xl font-bold text-slate-800 mb-1">{selectedCustomer.name}</h4>
               <p className="text-sm text-slate-500 mb-6">{selectedCustomer.address || 'Sem endereço cadastrado'}</p>
@@ -142,7 +167,7 @@ const CustomerManagement: React.FC = () => {
       {isAdding && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-lg animate-in zoom-in duration-200">
-            <h3 className="text-xl font-bold mb-6 text-indigo-900">Novo Cadastro de Cliente</h3>
+            <h3 className="text-xl font-bold mb-6 text-indigo-900">{editingId ? 'Editar Cliente' : 'Novo Cadastro de Cliente'}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase">Nome Completo</label>
@@ -162,7 +187,7 @@ const CustomerManagement: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-2 pt-8">
-              <button onClick={() => setIsAdding(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl">Cancelar</button>
+              <button onClick={resetForm} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl">Cancelar</button>
               <button onClick={handleSave} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-100">Salvar Cliente</button>
             </div>
           </div>

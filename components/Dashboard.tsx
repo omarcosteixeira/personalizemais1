@@ -17,12 +17,15 @@ interface Props {
 }
 
 const Dashboard: React.FC<Props> = ({ quotations, stock, onNavigateToNew }) => {
-  const totalVolume = quotations.reduce((acc, q) => acc + q.total, 0);
+  // Filtrar apenas pedidos que indicam que foram pagos/estão em processo de entrega
+  const paidQuotations = quotations.filter(q => ['PRODUCTION', 'SHIPPING', 'DELIVERED'].includes(q.status));
+  const totalVolume = paidQuotations.reduce((acc, q) => acc + q.total, 0);
+  
   const uniqueClients = new Set(quotations.map(q => q.customerName)).size;
   const lowStockItems = stock.filter(s => s.currentQuantity <= s.minQuantity);
 
   const stats = [
-    { label: 'Volume Bruto', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalVolume), icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { label: 'Volume Bruto (Pago)', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalVolume), icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50' },
     { label: 'Base de Clientes', value: uniqueClients.toString(), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Total Orçamentos', value: quotations.length.toString(), icon: FileText, color: 'text-orange-600', bg: 'bg-orange-50' },
   ];

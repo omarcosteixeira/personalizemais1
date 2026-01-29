@@ -38,6 +38,7 @@ export interface Product {
   materialId?: string;
   imageUrl?: string;
   isHighlighted?: boolean;
+  hiddenInStore?: boolean;
   hasSize?: boolean;
   availableSizes?: string[];
   hasTheme?: boolean;

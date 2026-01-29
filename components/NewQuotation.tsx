@@ -11,7 +11,6 @@ import {
   Tag, 
   Percent, 
   Check, 
-  // Added missing CheckCircle2 import
   CheckCircle2,
   Printer, 
   Box, 
@@ -26,7 +25,8 @@ import {
   Smartphone,
   Banknote,
   AlertCircle,
-  ChevronRight
+  ChevronRight,
+  FileBadge
 } from 'lucide-react';
 import { Product, PricingMode, QuotationItem, Quotation, Coupon, ShippingOption, Customer } from '../types';
 import { storage } from '../services/storageService';
@@ -35,11 +35,12 @@ import { pdfService } from '../services/pdfService';
 interface Props {
   products: Product[];
   initialData?: Quotation | null;
+  isEditing?: boolean;
   onSave: () => void;
   onNavigateToHistory?: () => void;
 }
 
-const NewQuotation: React.FC<Props> = ({ products, initialData, onSave, onNavigateToHistory }) => {
+const NewQuotation: React.FC<Props> = ({ products, initialData, isEditing, onSave, onNavigateToHistory }) => {
   const [customerName, setCustomerName] = useState(initialData?.customerName || '');
   const [customerContact, setCustomerContact] = useState(initialData?.customerContact || '');
   const [items, setItems] = useState<QuotationItem[]>(initialData?.items || []);
@@ -160,21 +161,35 @@ const NewQuotation: React.FC<Props> = ({ products, initialData, onSave, onNaviga
       const newCustomer: Customer = { id: Math.random().toString(36).substr(2, 9), name: customerName, phone: customerContact, cpf: '', address: '', createdAt: new Date().toISOString() };
       storage.saveCustomer(newCustomer);
     }
+    
+    // Se estiver editando, mantenha o ID original. Se for novo ou duplicado, gere um novo ID se não houver um passado.
+    // Lógica ajustada: isEditing garante que estamos atualizando. Sem isEditing, mesmo com initialData (duplicação), criamos novo ID.
+    const id = isEditing && initialData?.id ? initialData.id : `${status === 'PENDING' ? 'ORC' : 'PED'}-${Math.floor(1000 + Math.random() * 9000)}`;
+
     return {
-      id: initialData?.id || `${status === 'PENDING' ? 'ORC' : 'PED'}-${Math.floor(1000 + Math.random() * 9000)}`,
+      id,
       customerName, customerContact, items, subtotal, discountValue, discountType, couponCode: appliedCoupon?.code,
       shippingValue: shippingOption?.price || 0, shippingName: shippingOption?.name, gatewayFee, total: finalTotal,
       paymentMethod, paymentOption, installments: paymentMethod === 'CREDIT' ? installments : undefined,
-      createdAt: new Date().toISOString(), status: status
+      createdAt: isEditing && initialData?.createdAt ? initialData.createdAt : new Date().toISOString(), 
+      status: status
     };
   };
 
-  const handleGenerateBudgetPDF = () => {
+  const handleSaveAsBudget = () => {
     if (!customerName || items.length === 0) return;
     const quotation = createQuotationObject('PENDING');
     storage.saveQuotation(quotation);
     pdfService.generateQuotation(quotation).save(`${quotation.id}.pdf`);
     onSave();
+  };
+
+  const handleSaveAsOrder = () => {
+    if (!customerName || items.length === 0) return;
+    const quotation = createQuotationObject('AWAITING_PAYMENT');
+    storage.saveQuotation(quotation);
+    pdfService.generateQuotation(quotation).save(`${quotation.id}.pdf`);
+    onSave(); if (onNavigateToHistory) onNavigateToHistory();
   };
 
   const handleOpenWhatsappModal = () => {
@@ -183,14 +198,6 @@ const NewQuotation: React.FC<Props> = ({ products, initialData, onSave, onNaviga
     setPendingQuotation(quotation);
     setCustomMessage(settings.waMessages.quotation.replace(/{cliente}/g, quotation.customerName).replace(/{total}/g, new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quotation.total)));
     setShowWhatsappModal(true);
-  };
-
-  const handleTransformToOrder = () => {
-    if (!customerName || items.length === 0) return;
-    const quotation = createQuotationObject('AWAITING_PAYMENT');
-    storage.saveQuotation(quotation);
-    pdfService.generateQuotation(quotation).save(`${quotation.id}.pdf`);
-    onSave(); if (onNavigateToHistory) onNavigateToHistory();
   };
 
   const finalizeSaveWA = (sendWa: boolean) => {
@@ -207,7 +214,9 @@ const NewQuotation: React.FC<Props> = ({ products, initialData, onSave, onNaviga
       {/* Coluna Dados (Mobile Topo / Desktop Esquerda) */}
       <div className="lg:col-span-8 space-y-6 order-1">
         <div className="bg-white p-5 lg:p-6 rounded-3xl shadow-sm border border-slate-200">
-          <h4 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2"><Calculator className="w-5 h-5 text-indigo-500"/> Identificar Cliente</h4>
+          <h4 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
+            <Calculator className="w-5 h-5 text-indigo-500"/> {isEditing ? `Editando ${initialData?.id}` : 'Novo Pedido / Orçamento'}
+          </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-4">
             <div className="relative">
               <input type="text" value={customerName} onChange={e => {setCustomerName(e.target.value); setShowCustomerDropdown(true);}} onFocus={() => setShowCustomerDropdown(true)} placeholder="Nome do Cliente" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm" />
@@ -356,10 +365,10 @@ const NewQuotation: React.FC<Props> = ({ products, initialData, onSave, onNaviga
 
           <div className="pt-4 space-y-3 relative z-10">
             <div className="grid grid-cols-2 gap-2.5">
-              <button onClick={handleGenerateBudgetPDF} className="py-4 bg-white/10 border border-white/20 text-white font-bold rounded-2xl flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest hover:bg-white/20"><Printer className="w-4 h-4"/> PDF</button>
-              <button onClick={handleOpenWhatsappModal} className="py-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest hover:bg-emerald-500/20"><MessageCircle className="w-4 h-4"/> WA</button>
+              <button onClick={handleOpenWhatsappModal} className="py-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest hover:bg-emerald-500/20"><MessageCircle className="w-4 h-4"/> Enviar WA</button>
+              <button onClick={handleSaveAsBudget} className="py-4 bg-white/10 border border-white/20 text-white font-bold rounded-2xl flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest hover:bg-white/20"><FileBadge className="w-4 h-4"/> Salvar Orç.</button>
             </div>
-            <button onClick={handleTransformToOrder} className="w-full py-5 bg-indigo-500 text-white font-black rounded-[24px] shadow-2xl hover:bg-indigo-400 transition-all active:scale-95 flex items-center justify-center gap-3 border-b-4 border-indigo-700"><CheckCircle2 className="w-6 h-6"/> FINALIZAR PEDIDO</button>
+            <button onClick={handleSaveAsOrder} className="w-full py-5 bg-indigo-500 text-white font-black rounded-[24px] shadow-2xl hover:bg-indigo-400 transition-all active:scale-95 flex items-center justify-center gap-3 border-b-4 border-indigo-700"><CheckCircle2 className="w-6 h-6"/> {isEditing ? 'ATUALIZAR PEDIDO' : 'GERAR PEDIDO'}</button>
           </div>
         </div>
 
@@ -382,7 +391,7 @@ const NewQuotation: React.FC<Props> = ({ products, initialData, onSave, onNaviga
             <div className="p-8 space-y-6">
               <textarea value={customMessage} onChange={e => setCustomMessage(e.target.value)} className="w-full h-48 p-5 bg-slate-50 border border-slate-200 rounded-3xl outline-none text-sm leading-relaxed" />
               <div className="flex gap-3">
-                <button onClick={() => finalizeSaveWA(false)} className="flex-1 py-4 bg-slate-100 font-black text-slate-500 rounded-2xl text-[10px] uppercase">Salvar</button>
+                <button onClick={() => finalizeSaveWA(false)} className="flex-1 py-4 bg-slate-100 font-black text-slate-500 rounded-2xl text-[10px] uppercase">Salvar sem Enviar</button>
                 <button onClick={() => finalizeSaveWA(true)} className="flex-1 py-4 bg-emerald-600 text-white font-black rounded-2xl shadow-xl shadow-emerald-100 flex items-center justify-center gap-2 text-[10px] uppercase"><MessageCircle className="w-4 h-4"/> Enviar Agora</button>
               </div>
             </div>

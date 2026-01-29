@@ -47,7 +47,10 @@ const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [stock, setStock] = useState<StockItem[]>([]);
+  
+  // Estado para duplicação ou edição de orçamento
   const [duplicateTarget, setDuplicateTarget] = useState<Quotation | null>(null);
+  const [editingQuotation, setEditingQuotation] = useState<Quotation | null>(null);
 
   // Estados para a Loja Pública
   const [isPublicStore, setIsPublicStore] = useState(false);
@@ -159,8 +162,19 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard quotations={quotations} stock={stock} onNavigateToNew={() => setActiveTab('new')} />;
       case 'pdv': return <PDV products={products} onSaleComplete={refreshData} />;
-      case 'new': return <NewQuotation products={products} initialData={duplicateTarget} onSave={() => { refreshData(); setDuplicateTarget(null); }} onNavigateToHistory={() => setActiveTab('history')} />;
-      case 'history': return <QuotationHistory quotations={quotations} onDuplicate={(q) => { setDuplicateTarget(q); setActiveTab('new'); }} />;
+      case 'new': return <NewQuotation 
+        products={products} 
+        initialData={editingQuotation || duplicateTarget} 
+        isEditing={!!editingQuotation}
+        onSave={() => { refreshData(); setDuplicateTarget(null); setEditingQuotation(null); }} 
+        onNavigateToHistory={() => setActiveTab('history')} 
+      />;
+      case 'history': return <QuotationHistory 
+        quotations={quotations} 
+        onDuplicate={(q) => { setDuplicateTarget(q); setEditingQuotation(null); setActiveTab('new'); }} 
+        onEdit={(q) => { setEditingQuotation(q); setDuplicateTarget(null); setActiveTab('new'); }}
+        onUpdate={refreshData}
+      />;
       case 'customers': return <CustomerManagement />;
       case 'admin': return <AdminPanel />;
       case 'finance': return <AccountsPayable />;
@@ -219,7 +233,7 @@ const App: React.FC = () => {
         </div>
         <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => (
-            <button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === item.id ? 'bg-slate-50 text-indigo-900 shadow-lg font-bold' : 'text-indigo-100 hover:bg-indigo-800'}`}>
+            <button key={item.id} onClick={() => { setActiveTab(item.id as any); setEditingQuotation(null); setDuplicateTarget(null); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === item.id ? 'bg-slate-50 text-indigo-900 shadow-lg font-bold' : 'text-indigo-100 hover:bg-indigo-800'}`}>
               <item.icon className="w-5 h-5" /> {item.label}
             </button>
           ))}
@@ -263,7 +277,7 @@ const App: React.FC = () => {
           {mainNav.map((item) => (
             <button 
               key={item.id} 
-              onClick={() => { setActiveTab(item.id as any); setIsMenuOpen(false); }} 
+              onClick={() => { setActiveTab(item.id as any); setIsMenuOpen(false); setEditingQuotation(null); setDuplicateTarget(null); }} 
               className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-2 transition-all ${activeTab === item.id ? 'text-indigo-600' : 'opacity-60'}`}
             >
               <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'stroke-[2.5px]' : 'stroke-[1.5px]'}`} />

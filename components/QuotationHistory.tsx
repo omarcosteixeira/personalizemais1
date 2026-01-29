@@ -2,15 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import { Quotation, OrderStatus } from '../types';
 import { storage } from '../services/storageService';
-import { Search, FileDown, MessageSquare, Calendar, User, Phone, Copy, CheckCircle2, Clock, Truck, Box as BoxIcon, X, Send } from 'lucide-react';
+import { Search, FileDown, MessageSquare, Calendar, User, Phone, Copy, CheckCircle2, Clock, Truck, Box as BoxIcon, X, Send, Edit, Trash2, DollarSign } from 'lucide-react';
 import { pdfService } from '../services/pdfService';
 
 interface Props {
   quotations: Quotation[];
   onDuplicate: (q: Quotation) => void;
+  onEdit: (q: Quotation) => void;
+  onUpdate: () => void;
 }
 
-const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate }) => {
+const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate, onEdit, onUpdate }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [localQuotations, setLocalQuotations] = useState<Quotation[]>(quotations);
   const settings = storage.getSettings();
@@ -27,12 +29,20 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate }) => {
   const updateStatus = (q: Quotation, newStatus: OrderStatus) => {
     const updated = { ...q, status: newStatus };
     storage.saveQuotation(updated);
-    
-    // Update local state instead of reloading
     setLocalQuotations(prev => prev.map(item => item.id === q.id ? updated : item));
-    
-    // Optional: notify on status change automatically? 
-    // Usually better to let the user click "Notificar" to review.
+  };
+
+  const confirmPayment = (q: Quotation) => {
+    if (confirm('Confirmar pagamento deste pedido? O status será alterado para Em Produção.')) {
+      updateStatus(q, 'PRODUCTION');
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este orçamento permanentemente?')) {
+      storage.deleteQuotation(id);
+      onUpdate();
+    }
   };
 
   const getStatusInfo = (status: OrderStatus) => {
@@ -94,7 +104,10 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate }) => {
                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 ${status.color}`}>
                   <status.icon className="w-3 h-3"/> {status.label}
                 </span>
-                <span className="text-[10px] font-bold text-slate-400">{q.id}</span>
+                <div className="flex gap-2">
+                  <span className="text-[10px] font-bold text-slate-400">{q.id}</span>
+                  <button onClick={() => handleDelete(q.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-3 h-3"/></button>
+                </div>
               </div>
               <h4 className="font-bold text-slate-800 mb-1 flex items-center gap-2"><User className="w-4 h-4 text-slate-400"/> {q.customerName}</h4>
               <p className="text-xs text-slate-500 mb-4">{new Date(q.createdAt).toLocaleString()}</p>
@@ -123,6 +136,10 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate }) => {
               <div className="pt-4 flex items-center justify-between">
                 <div><p className="text-[10px] text-slate-400 uppercase font-bold">Total Final</p><p className="text-lg font-black text-indigo-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(q.total)}</p></div>
                 <div className="flex gap-1">
+                  <button onClick={() => onEdit(q)} title="Editar Pedido" className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-lg"><Edit className="w-4 h-4"/></button>
+                  {q.status !== 'PRODUCTION' && q.status !== 'DELIVERED' && q.status !== 'SHIPPING' && (
+                    <button onClick={() => confirmPayment(q)} title="Confirmar Pagamento" className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg"><DollarSign className="w-4 h-4"/></button>
+                  )}
                   <button onClick={() => onDuplicate(q)} title="Duplicar Pedido" className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-lg"><Copy className="w-4 h-4"/></button>
                   <button onClick={() => pdfService.generateQuotation(q).save(`${q.id}.pdf`)} title="Baixar PDF" className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-lg"><FileDown className="w-4 h-4"/></button>
                 </div>

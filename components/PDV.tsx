@@ -82,7 +82,9 @@ const PDV: React.FC<Props> = ({ products, onSaleComplete }) => {
       paymentMethod,
       paymentOption: 'FULL',
       createdAt: new Date().toISOString(),
-      status: 'DELIVERED'
+      status: 'DELIVERED',
+      isPaid: true, // Venda de balcão considera-se paga
+      paidAt: new Date().toISOString()
     };
 
     storage.saveQuotation(sale);

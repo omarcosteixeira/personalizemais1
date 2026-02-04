@@ -17,15 +17,15 @@ interface Props {
 }
 
 const Dashboard: React.FC<Props> = ({ quotations, stock, onNavigateToNew }) => {
-  // Filtrar apenas pedidos que indicam que foram pagos/estão em processo de entrega
-  const paidQuotations = quotations.filter(q => ['PRODUCTION', 'SHIPPING', 'DELIVERED'].includes(q.status));
+  // Volume Bruto: Soma apenas se isPaid for true
+  const paidQuotations = quotations.filter(q => q.isPaid);
   const totalVolume = paidQuotations.reduce((acc, q) => acc + q.total, 0);
   
   const uniqueClients = new Set(quotations.map(q => q.customerName)).size;
   const lowStockItems = stock.filter(s => s.currentQuantity <= s.minQuantity);
 
   const stats = [
-    { label: 'Volume Bruto (Pago)', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalVolume), icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { label: 'Volume Bruto (Recebido)', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalVolume), icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50' },
     { label: 'Base de Clientes', value: uniqueClients.toString(), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Total Orçamentos', value: quotations.length.toString(), icon: FileText, color: 'text-orange-600', bg: 'bg-orange-50' },
   ];
@@ -65,8 +65,8 @@ const Dashboard: React.FC<Props> = ({ quotations, stock, onNavigateToNew }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-            <h3 className="text-lg font-bold text-slate-800">Orçamentos Recentes</h3>
-            <button className="text-indigo-600 text-sm font-bold flex items-center gap-1">Ver todos</button>
+            <h3 className="text-lg font-bold text-slate-800">Últimos Pedidos Pagos</h3>
+            <span className="text-emerald-600 text-xs font-black uppercase tracking-widest">Entradas Recentes</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -77,14 +77,22 @@ const Dashboard: React.FC<Props> = ({ quotations, stock, onNavigateToNew }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {quotations.slice(0, 5).map(q => (
+                {paidQuotations.slice(0, 5).map(q => (
                   <tr key={q.id}>
-                    <td className="px-6 py-4 text-sm font-bold text-slate-700">{q.customerName}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-700">
+                      {q.customerName}
+                      <span className="block text-[9px] text-slate-400">{new Date(q.paidAt || q.createdAt).toLocaleDateString()}</span>
+                    </td>
                     <td className="px-6 py-4 text-sm font-black text-indigo-900 text-right">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(q.total)}
                     </td>
                   </tr>
                 ))}
+                {paidQuotations.length === 0 && (
+                  <tr>
+                    <td colSpan={2} className="px-6 py-8 text-center text-slate-400 text-xs italic">Nenhum pagamento confirmado ainda.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

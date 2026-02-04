@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Quotation, OrderStatus } from '../types';
 import { storage } from '../services/storageService';
-import { Search, FileDown, MessageSquare, Calendar, User, Phone, Copy, CheckCircle2, Clock, Truck, Box as BoxIcon, X, Send, Edit, Trash2, DollarSign } from 'lucide-react';
+import { Search, FileDown, MessageSquare, Calendar, User, Phone, Copy, CheckCircle2, Clock, Truck, Box as BoxIcon, X, Send, Edit, Trash2, DollarSign, Wallet } from 'lucide-react';
 import { pdfService } from '../services/pdfService';
 
 interface Props {
@@ -32,10 +32,19 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate, onEdit, on
     setLocalQuotations(prev => prev.map(item => item.id === q.id ? updated : item));
   };
 
-  const confirmPayment = (q: Quotation) => {
-    if (confirm('Confirmar pagamento deste pedido? O status será alterado para Em Produção.')) {
-      updateStatus(q, 'PRODUCTION');
-    }
+  const togglePayment = (q: Quotation) => {
+    const isNowPaid = !q.isPaid;
+    const updated: Quotation = { 
+      ...q, 
+      isPaid: isNowPaid,
+      paidAt: isNowPaid ? new Date().toISOString() : undefined,
+      // Se marcou como pago e estava em status inicial, avança para produção automaticamente
+      status: (isNowPaid && (q.status === 'PENDING' || q.status === 'AWAITING_PAYMENT')) 
+        ? 'PRODUCTION' 
+        : q.status
+    };
+    storage.saveQuotation(updated);
+    setLocalQuotations(prev => prev.map(item => item.id === q.id ? updated : item));
   };
 
   const handleDelete = (id: string) => {
@@ -99,8 +108,14 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate, onEdit, on
         {filtered.map(q => {
           const status = getStatusInfo(q.status);
           return (
-            <div key={q.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative">
-              <div className="flex justify-between items-center mb-4">
+            <div key={q.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+              {q.isPaid && (
+                <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[9px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest flex items-center gap-1 shadow-sm">
+                  <CheckCircle2 className="w-3 h-3" /> Pago
+                </div>
+              )}
+              
+              <div className="flex justify-between items-center mb-4 mt-2">
                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 ${status.color}`}>
                   <status.icon className="w-3 h-3"/> {status.label}
                 </span>
@@ -125,23 +140,34 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate, onEdit, on
                     </button>
                   ))}
                 </div>
-                <button 
-                  onClick={() => notifyClient(q)}
-                  className="w-full py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-100 transition-colors"
-                >
-                  <Send className="w-3 h-3"/> Notificar p/ WhatsApp
-                </button>
               </div>
 
-              <div className="pt-4 flex items-center justify-between">
-                <div><p className="text-[10px] text-slate-400 uppercase font-bold">Total Final</p><p className="text-lg font-black text-indigo-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(q.total)}</p></div>
-                <div className="flex gap-1">
-                  <button onClick={() => onEdit(q)} title="Editar Pedido" className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-lg"><Edit className="w-4 h-4"/></button>
-                  {q.status !== 'PRODUCTION' && q.status !== 'DELIVERED' && q.status !== 'SHIPPING' && (
-                    <button onClick={() => confirmPayment(q)} title="Confirmar Pagamento" className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg"><DollarSign className="w-4 h-4"/></button>
-                  )}
-                  <button onClick={() => onDuplicate(q)} title="Duplicar Pedido" className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-lg"><Copy className="w-4 h-4"/></button>
-                  <button onClick={() => pdfService.generateQuotation(q).save(`${q.id}.pdf`)} title="Baixar PDF" className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-lg"><FileDown className="w-4 h-4"/></button>
+              <div className="pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">Total Final</p>
+                    <p className="text-lg font-black text-indigo-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(q.total)}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <button onClick={() => onEdit(q)} title="Editar Pedido" className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-lg"><Edit className="w-4 h-4"/></button>
+                    <button onClick={() => onDuplicate(q)} title="Duplicar Pedido" className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-lg"><Copy className="w-4 h-4"/></button>
+                    <button onClick={() => pdfService.generateQuotation(q).save(`${q.id}.pdf`)} title="Baixar PDF" className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-lg"><FileDown className="w-4 h-4"/></button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => notifyClient(q)}
+                    className="py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                  >
+                    <Send className="w-3 h-3"/> WhatsApp
+                  </button>
+                  <button 
+                    onClick={() => togglePayment(q)}
+                    className={`py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-sm ${q.isPaid ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-white border border-slate-200 text-slate-400 hover:border-emerald-300 hover:text-emerald-500'}`}
+                  >
+                    {q.isPaid ? <><CheckCircle2 className="w-3 h-3"/> Pago</> : <><DollarSign className="w-3 h-3"/> Confirmar $</>}
+                  </button>
                 </div>
               </div>
             </div>

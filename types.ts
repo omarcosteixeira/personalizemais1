@@ -108,6 +108,8 @@ export interface Quotation {
   createdAt: string;
   status: OrderStatus;
   customMessage?: string;
+  isPaid?: boolean; // Novo campo: Baixa Financeira
+  paidAt?: string;  // Novo campo: Data do Pagamento
 }
 
 export interface Coupon {

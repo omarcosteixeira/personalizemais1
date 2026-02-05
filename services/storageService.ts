@@ -96,8 +96,11 @@ export const storage = {
       if (configSnap.exists()) {
         return { ...DEFAULT_SYSTEM_CONFIG, ...configSnap.data() } as SystemConfig;
       }
-    } catch (e) {
-      console.error("Erro ao obter config do sistema:", e);
+    } catch (e: any) {
+      // Silencia erros de permissão comuns em ambientes públicos/convidados
+      if (e.code !== 'permission-denied' && !e.message?.includes('Missing or insufficient permissions')) {
+        console.error("Erro ao obter config do sistema:", e);
+      }
     }
     return DEFAULT_SYSTEM_CONFIG;
   },

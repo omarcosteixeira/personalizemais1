@@ -83,7 +83,8 @@ const PDV: React.FC<Props> = ({ products, onSaleComplete }) => {
       paymentOption: 'FULL',
       createdAt: new Date().toISOString(),
       status: 'DELIVERED',
-      isPaid: true, // Venda de balcão considera-se paga
+      isPaid: true, 
+      amountPaid: subtotal, // Venda de balcão é pagamento integral imediato
       paidAt: new Date().toISOString()
     };
 

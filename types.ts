@@ -108,8 +108,9 @@ export interface Quotation {
   createdAt: string;
   status: OrderStatus;
   customMessage?: string;
-  isPaid?: boolean; // Novo campo: Baixa Financeira
-  paidAt?: string;  // Novo campo: Data do Pagamento
+  isPaid?: boolean; // True se TOTALMENTE pago
+  paidAt?: string;
+  amountPaid?: number; // Valor efetivamente pago (pode ser parcial)
 }
 
 export interface Coupon {

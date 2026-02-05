@@ -52,8 +52,11 @@ const App: React.FC = () => {
   const [duplicateTarget, setDuplicateTarget] = useState<Quotation | null>(null);
   const [editingQuotation, setEditingQuotation] = useState<Quotation | null>(null);
 
-  // Estados para a Loja Pública
-  const [isPublicStore, setIsPublicStore] = useState(false);
+  // Estados para a Loja Pública (Inicialização Preguiçosa para evitar flash da Landing Page)
+  const [isPublicStore, setIsPublicStore] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return !!params.get('store');
+  });
   const [publicData, setPublicData] = useState<{ products: Product[], settings: AppSettings } | null>(null);
 
   useEffect(() => {
@@ -62,7 +65,7 @@ const App: React.FC = () => {
     const storeId = params.get('store');
     
     if (storeId) {
-      setIsPublicStore(true);
+      // Já está setado via lazy init, mas buscamos os dados aqui
       storage.getPublicData(storeId).then(data => {
         setPublicData(data);
         setIsSyncing(false);
@@ -133,18 +136,32 @@ const App: React.FC = () => {
     });
   };
 
-  if (isPublicStore && publicData) {
-    return <Storefront products={publicData.products} />;
+  // 1. Loading State para Loja Pública
+  if (isPublicStore && !publicData) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
+        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-slate-500 font-bold text-sm uppercase tracking-widest">Carregando Loja...</p>
+      </div>
+    );
   }
 
+  // 2. Renderização da Loja Pública Carregada
+  if (isPublicStore && publicData) {
+    return <Storefront products={publicData.products} settings={publicData.settings} />;
+  }
+
+  // 3. Landing Page para Visitantes (não loja pública)
   if (userStatus === 'GUEST' && !showLogin) {
     return <LandingPage onStart={() => setShowLogin(true)} />;
   }
 
+  // 4. Login para Usuários não aprovados/expirados ou clicando em Login
   if (userStatus !== 'APPROVED' && !isPublicStore) {
     return <LoginPage userStatus={userStatus} onAuthChange={() => {}} />;
   }
 
+  // 5. Preview da Loja (Logado)
   if (activeTab === 'store') {
     return (
       <div className="relative h-screen overflow-hidden">

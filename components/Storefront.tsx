@@ -24,14 +24,17 @@ import {
 
 interface Props {
   products: Product[];
+  settings?: AppSettings;
 }
 
-const Storefront: React.FC<Props> = ({ products }) => {
+const Storefront: React.FC<Props> = ({ products, settings: propSettings }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [currentBanner, setCurrentBanner] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const settings = storage.getSettings();
+  
+  const localSettings = storage.getSettings();
+  const settings = propSettings || localSettings;
 
   // Filter out hidden products first
   const visibleProducts = products.filter(p => !p.hiddenInStore);

@@ -17,18 +17,27 @@ interface Props {
 }
 
 const Dashboard: React.FC<Props> = ({ quotations, stock, onNavigateToNew }) => {
-  // Volume Bruto: Soma apenas se isPaid for true
-  const paidQuotations = quotations.filter(q => q.isPaid);
-  const totalVolume = paidQuotations.reduce((acc, q) => acc + q.total, 0);
+  // Volume Bruto: Soma o valor que foi efetivamente pago (amountPaid)
+  // Se amountPaid não existir (legado), usa total se isPaid for true
+  const totalVolume = quotations.reduce((acc, q) => {
+    const paidAmount = q.amountPaid !== undefined ? q.amountPaid : (q.isPaid ? q.total : 0);
+    return acc + paidAmount;
+  }, 0);
   
   const uniqueClients = new Set(quotations.map(q => q.customerName)).size;
   const lowStockItems = stock.filter(s => s.currentQuantity <= s.minQuantity);
 
   const stats = [
-    { label: 'Volume Bruto (Recebido)', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalVolume), icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { label: 'Volume Bruto (Em Caixa)', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalVolume), icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50' },
     { label: 'Base de Clientes', value: uniqueClients.toString(), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Total Orçamentos', value: quotations.length.toString(), icon: FileText, color: 'text-orange-600', bg: 'bg-orange-50' },
   ];
+
+  // Filtra pagamentos recentes (parciais ou totais)
+  const recentPayments = quotations
+    .filter(q => (q.amountPaid && q.amountPaid > 0) || q.isPaid)
+    .sort((a, b) => new Date(b.paidAt || b.createdAt).getTime() - new Date(a.paidAt || a.createdAt).getTime())
+    .slice(0, 5);
 
   return (
     <div className="space-y-8">
@@ -65,30 +74,34 @@ const Dashboard: React.FC<Props> = ({ quotations, stock, onNavigateToNew }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-            <h3 className="text-lg font-bold text-slate-800">Últimos Pedidos Pagos</h3>
-            <span className="text-emerald-600 text-xs font-black uppercase tracking-widest">Entradas Recentes</span>
+            <h3 className="text-lg font-bold text-slate-800">Entradas Recentes</h3>
+            <span className="text-emerald-600 text-xs font-black uppercase tracking-widest">Fluxo de Caixa</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase">
                 <tr>
                   <th className="px-6 py-3">Cliente</th>
-                  <th className="px-6 py-3 text-right">Valor</th>
+                  <th className="px-6 py-3 text-right">Valor Pago</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {paidQuotations.slice(0, 5).map(q => (
-                  <tr key={q.id}>
-                    <td className="px-6 py-4 text-sm font-bold text-slate-700">
-                      {q.customerName}
-                      <span className="block text-[9px] text-slate-400">{new Date(q.paidAt || q.createdAt).toLocaleDateString()}</span>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-black text-indigo-900 text-right">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(q.total)}
-                    </td>
-                  </tr>
-                ))}
-                {paidQuotations.length === 0 && (
+                {recentPayments.map(q => {
+                  const paid = q.amountPaid || (q.isPaid ? q.total : 0);
+                  const isPartial = paid < q.total;
+                  return (
+                    <tr key={q.id}>
+                      <td className="px-6 py-4">
+                        <p className="text-sm font-bold text-slate-700">{q.customerName}</p>
+                        <p className="text-[9px] text-slate-400">{new Date(q.paidAt || q.createdAt).toLocaleDateString()} {isPartial && <span className="text-orange-500 font-bold ml-1">(Parcial)</span>}</p>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-black text-indigo-900 text-right">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(paid)}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {recentPayments.length === 0 && (
                   <tr>
                     <td colSpan={2} className="px-6 py-8 text-center text-slate-400 text-xs italic">Nenhum pagamento confirmado ainda.</td>
                   </tr>

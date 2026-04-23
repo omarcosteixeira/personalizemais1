@@ -51,7 +51,10 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
         await aistudio.openSelectKey();
         setError(null);
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+        return;
+      }
       console.error("Erro ao abrir seletor de chaves:", err);
       setError("Não foi possível abrir o seletor de chaves. Recarregue a página.");
     }
@@ -87,11 +90,31 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
       // 3. Gerar Roteiro de Vendas (Flash)
       const textPrompt = `Aja como um especialista em marketing para gráficas rápidas. Crie uma legenda persuasiva para Instagram para o produto: ${productName}. Objetivo: ${objective}. Preço: ${productPrice}. Inclua emojis e CTA para o WhatsApp ${settings.phone}.`;
       
-      const textResponse = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: textPrompt,
+      const groqKey = import.meta.env.VITE_GROQ_API_KEY;
+      if (!groqKey) {
+        setError("Chave Groq não configurada no ambiente.");
+        setIsGenerating(false);
+        return;
+      }
+
+      const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${groqKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: textPrompt }],
+          model: "llama-3.3-70b-versatile"
+        })
       });
-      setGeneratedCopy(textResponse.text || "");
+
+      if (groqResponse.ok) {
+        const groqData = await groqResponse.json();
+        setGeneratedCopy(groqData.choices?.[0]?.message?.content || "");
+      } else {
+        setGeneratedCopy("Erro ao gerar legenda com a Groq.");
+      }
 
       // 4. Gerar Arte Visual (Pro Image)
       const imagePrompt = `Publicidade profissional para gráfica: ${productName}. Mockup realista em fundo elegante, iluminação suave de estúdio, tons de ${settings.theme.primaryColor}. Qualidade fotográfica comercial, 8k, ultra detalhado. Sem textos na imagem.`;
@@ -123,6 +146,11 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
       console.error("Erro na API Gemini:", err);
       const msg = err.message || "";
       
+      if (err.name === 'AbortError' || msg.includes('aborted')) {
+        setError("Criação cancelada.");
+        return;
+      }
+
       if (msg.includes("API key") || msg.includes("Requested entity was not found")) {
         setError("Chave Inválida ou Sem Saldo. Certifique-se de selecionar uma chave 'AIza...' de um projeto com faturamento ativo.");
       } else {

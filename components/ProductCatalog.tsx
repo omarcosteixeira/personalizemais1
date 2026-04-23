@@ -85,18 +85,32 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
 
     setIsAiLoading(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const prompt = `Melhore esta descrição de produto para uma gráfica rápida, tornando-a persuasiva: Produto: ${name}. Categoria: ${category}. Texto base: ${description}.`;
+      
+      const groqKey = import.meta.env.VITE_GROQ_API_KEY;
+      if (!groqKey) throw new Error("Chave Groq não configurada");
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${groqKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: prompt }],
+          model: "llama-3.3-70b-versatile"
+        })
       });
 
-      const improvedText = response.text;
+      if (!response.ok) throw new Error("Erro na API da Groq");
+      
+      const data = await response.json();
+      const improvedText = data.choices?.[0]?.message?.content;
+      
       if (improvedText) setDescription(improvedText.trim());
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      if (error.name === 'AbortError' || error.message?.includes('aborted')) return;
       alert("IA indisponível no momento.");
     } finally {
       setIsAiLoading(false);

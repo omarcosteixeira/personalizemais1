@@ -102,9 +102,15 @@ const MockupGenerator: React.FC = () => {
 
     } catch (err: any) {
       console.error(err);
-      if (err.message?.includes("Requested entity was not found")) {
+      if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+        setError("Seleção de chave ou geração cancelada.");
+      } else if (err.message?.includes("Requested entity was not found")) {
         setError("Erro de chave de API. Por favor, selecione uma chave válida com faturamento ativo.");
-        await (window as any).aistudio.openSelectKey();
+        try {
+          await (window as any).aistudio.openSelectKey();
+        } catch (e) {
+          /* ignore aborts here */
+        }
       } else {
         setError(err.message || "Erro ao gerar mockup. Tente novamente.");
       }
@@ -263,7 +269,7 @@ const MockupGenerator: React.FC = () => {
                  <p className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">Informação de Processamento</p>
                  <p className="text-xs text-indigo-600/80">Este recurso utiliza o modelo de alta performance **Gemini 3 Pro Image**. Certifique-se de usar sua própria API Key.</p>
                </div>
-               <button onClick={() => (window as any).aistudio.openSelectKey()} className="px-4 py-2 bg-white border border-indigo-200 rounded-xl text-[10px] font-black text-indigo-600 uppercase hover:bg-indigo-100 transition-colors">Configurar Chave</button>
+               <button onClick={() => (window as any).aistudio.openSelectKey().catch(() => {})} className="px-4 py-2 bg-white border border-indigo-200 rounded-xl text-[10px] font-black text-indigo-600 uppercase hover:bg-indigo-100 transition-colors">Configurar Chave</button>
             </div>
           </div>
         </div>

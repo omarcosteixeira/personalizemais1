@@ -54,14 +54,22 @@ const syncToFirebase = async (col: string, id: string, data: any) => {
   try {
     const path = getTenantPath();
     await setDoc(doc(db, `${path}/${col}`, id), data);
-  } catch (e) { console.error(e); }
+  } catch (e: any) { 
+    if (e.code !== 'permission-denied' && !e.message?.includes('Missing or insufficient permissions')) {
+      console.error(e); 
+    }
+  }
 };
 
 const removeFromFirebase = async (col: string, id: string) => {
   try {
     const path = getTenantPath();
     await deleteDoc(doc(db, `${path}/${col}`, id));
-  } catch (e) { console.error(e); }
+  } catch (e: any) { 
+    if (e.code !== 'permission-denied' && !e.message?.includes('Missing or insufficient permissions')) {
+      console.error(e); 
+    }
+  }
 };
 
 export const storage = {
@@ -82,16 +90,28 @@ export const storage = {
     ];
 
     const syncTasks = collections.map(async (col) => {
-      const snap = await getDocs(collection(db, `${path}/${col.fb}`));
-      const data = snap.docs.map(d => d.data());
-      localStorage.setItem(`pplus_${user.uid}_${col.k}`, JSON.stringify(data));
-    });
-
-    const settingsTask = getDoc(doc(db, `${path}/settings`, 'global')).then(settingsSnap => {
-      if (settingsSnap.exists()) {
-        localStorage.setItem(`pplus_${user.uid}_settings`, JSON.stringify(settingsSnap.data()));
+      try {
+        const snap = await getDocs(collection(db, `${path}/${col.fb}`));
+        const data = snap.docs.map(d => d.data());
+        localStorage.setItem(`pplus_${user.uid}_${col.k}`, JSON.stringify(data));
+      } catch (err: any) {
+        if (err.code !== 'permission-denied' && !err.message?.includes('Missing or insufficient permissions')) {
+          console.error(`Erro ao sincronizar coleção ${col.k}:`, err);
+        }
       }
     });
+
+    const settingsTask = getDoc(doc(db, `${path}/settings`, 'global'))
+      .then(settingsSnap => {
+        if (settingsSnap.exists()) {
+          localStorage.setItem(`pplus_${user.uid}_settings`, JSON.stringify(settingsSnap.data()));
+        }
+      })
+      .catch((err: any) => {
+        if (err.code !== 'permission-denied' && !err.message?.includes('Missing or insufficient permissions')) {
+          console.error(`Erro ao sincronizar configurações:`, err);
+        }
+      });
 
     await Promise.all([...syncTasks, settingsTask]);
   },

@@ -449,7 +449,7 @@ const SettingsPage: React.FC = () => {
               <hr className="border-slate-100" />
 
               <div className="space-y-4">
-                <h5 className="font-bold text-slate-700 text-sm">Integração do Bot (Railway)</h5>
+                <h5 className="font-bold text-slate-700 text-sm">Integração do Bot (Render / Local)</h5>
                 
                 <div className="flex items-center gap-2 mb-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
                   <button 
@@ -475,12 +475,12 @@ const SettingsPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Link do Webhook (Railway)</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Link do Webhook (Render / Local)</label>
                     <input 
                       type="url"
                       value={settings.webhookUrl || ''} 
                       onChange={e => setSettings({...settings, webhookUrl: e.target.value})}
-                      placeholder="https://seu-bot.up.railway.app"
+                      placeholder="Ex: https://ane-bot-atelie.onrender.com ou http://localhost:10000"
                       className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
                     />
                   </div>
@@ -503,13 +503,14 @@ const SettingsPage: React.FC = () => {
                       if (!settings.webhookUrl || !settings.webhookSecret) {
                         return alert("Preencha o link do webhook e a senha primeiro.");
                       }
+                      const url = `${settings.webhookUrl.replace(/\/$/, '')}/api/status`; 
                       try {
-                        const url = `${settings.webhookUrl.replace(/\/$/, '')}/api/status`; 
                         const res = await fetch(url);
                         if (res.ok) alert("✅ Conexão estabelecida com sucesso!");
                         else alert("⚠️ Conexão falhou. Status da resposta: " + res.status);
                       } catch (e) {
-                         alert("❌ Erro ao conectar com o servidor do bot. Verifique o link fornecido.");
+                         alert("❌ Erro na chamada local (possível bloqueio de CORS). O link de status será aberto em uma nova aba para testar diretamente.");
+                         window.open(url, '_blank');
                       }
                     }}
                     className="px-6 py-3 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all"
@@ -522,9 +523,8 @@ const SettingsPage: React.FC = () => {
                        if (!settings.webhookUrl || !settings.webhookSecret) {
                         return alert("Preencha o link do webhook e a senha primeiro.");
                        }
-                       // Exemplo chamando rota de auth/qr do sistema de backend
-                       alert(`Para parear o WhatsApp, acesse diretamente o servidor do seu bot para gerar o QR ou acompanhe o terminal do mesmo.\nLink do Bot: ${settings.webhookUrl}`);
-                       // Exemplo: se o bot tiver rota de qr-code: window.open(`${settings.webhookUrl}/qr`, '_blank');
+                       const qrUrl = `${settings.webhookUrl.replace(/\/$/, '')}/api/qrcode`;
+                       window.open(qrUrl, '_blank');
                     }}
                     className="px-6 py-3 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all"
                   >
@@ -532,7 +532,7 @@ const SettingsPage: React.FC = () => {
                   </button>
                 </div>
                 <p className="text-[10px] text-slate-400 pt-2">
-                  Nota: Se o seu bot no Railway tiver uma rota específica para gerador do QR (ex: /qr), o botão acima pode ser modificado no código para abrir na nova aba.
+                  Nota: O botão acima abrirá a rota /api/qrcode do seu bot.
                 </p>
 
               </div>

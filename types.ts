@@ -88,6 +88,22 @@ export interface CustomFont {
   format: string; // ttf, otf, woff
 }
 
+export interface Prospect {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  createdAt: string;
+  webhookStatus?: 'PENDING' | 'SUCCESS' | 'ERROR';
+}
+
+export interface MessageTemplate {
+  id: string;
+  name: string;
+  message: string;
+  imageUrl?: string;
+}
+
 export interface Quotation {
   id: string;
   customerName: string;
@@ -157,6 +173,10 @@ export interface AppSettings {
     workingDaysPerMonth: number;
     hoursPerDay: number;
   };
+  groqApiKey?: string;
+  webhookUrl?: string;
+  webhookSecret?: string;
+  botEnabled?: boolean;
 }
 
 export interface StockItem {

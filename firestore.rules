@@ -87,6 +87,15 @@ service cloud.firestore {
       match /fonts/{document=**} {
         allow read, write: if isOwner(tenantId);
       }
+      
+      match /prospects/{document=**} {
+        allow create: if true; // Public visitors can sign up for promotions
+        allow read, update, delete: if isOwner(tenantId);
+      }
+
+      match /message_templates/{document=**} {
+        allow read, write: if isOwner(tenantId);
+      }
     }
   }
 }

@@ -4,7 +4,7 @@ import {
   Plus, History, Package, LayoutDashboard, Printer, Box, ExternalLink, 
   ChevronLeft, Settings, Ticket, Users, Calculator, Layers, FileSpreadsheet, 
   Type, ShoppingCart, Menu, LogOut, ShieldCheck, X, MoreHorizontal, Copy,
-  Sparkles, Wallet
+  Sparkles, Wallet, Megaphone
 } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -31,8 +31,9 @@ import AdminPanel from './components/AdminPanel';
 import PromotionalAI from './components/PromotionalAI';
 import LandingPage from './components/LandingPage';
 import AccountsPayable from './components/AccountsPayable';
+import ProspectsPage from './components/ProspectsPage';
 
-type Tab = 'dashboard' | 'new' | 'history' | 'products' | 'store' | 'settings' | 'coupons' | 'customers' | 'fonts' | 'pdv' | 'admin' | 'finance';
+type Tab = 'dashboard' | 'new' | 'history' | 'products' | 'store' | 'settings' | 'coupons' | 'customers' | 'fonts' | 'pdv' | 'admin' | 'finance' | 'prospects';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -148,7 +149,9 @@ const App: React.FC = () => {
 
   // 2. Renderização da Loja Pública Carregada
   if (isPublicStore && publicData) {
-    return <Storefront products={publicData.products} settings={publicData.settings} />;
+    const params = new URLSearchParams(window.location.search);
+    const storeId = params.get('store');
+    return <Storefront products={publicData.products} settings={publicData.settings} tenantId={storeId || undefined} />;
   }
 
   // 3. Landing Page para Visitantes (não loja pública)
@@ -216,6 +219,7 @@ const App: React.FC = () => {
             {productSubTab === 'sheet' && <SheetCalculator />}
           </div>
         );
+      case 'prospects': return <ProspectsPage />;
       case 'fonts': return <FontTester />;
       case 'coupons': return <CouponsPage />;
       case 'settings': return <SettingsPage />;
@@ -231,6 +235,7 @@ const App: React.FC = () => {
     { id: 'finance', label: 'Financeiro', icon: Wallet },
     { id: 'products', label: 'Produtos', icon: Layers },
     { id: 'customers', label: 'Clientes', icon: Users },
+    { id: 'prospects', label: 'Prospectos', icon: Megaphone },
     { id: 'fonts', label: 'Fontes', icon: Type },
     { id: 'coupons', label: 'Cupons', icon: Ticket },
     { id: 'settings', label: 'Ajustes', icon: Settings },

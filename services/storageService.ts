@@ -1,5 +1,5 @@
 
-import { Product, Quotation, StockItem, StockMovement, AppSettings, Coupon, Customer, CustomFont, SystemConfig, PayableAccount } from '../types';
+import { Product, Quotation, StockItem, StockMovement, AppSettings, Coupon, Customer, CustomFont, SystemConfig, PayableAccount, Prospect, MessageTemplate } from '../types';
 import { db, auth } from './firebaseService';
 import { 
   collection, doc, setDoc, getDocs, deleteDoc, getDoc, query, orderBy 
@@ -29,7 +29,11 @@ const DEFAULT_SETTINGS: AppSettings = {
     store_product: 'Olá! Gostaria de informações sobre o produto *{produto}*.'
   },
   theme: { primaryColor: '#4338ca', secondaryColor: '#10b981', storeLayout: 'modern' },
-  financials: { monthlyFixedCosts: 1500, desiredMonthlySalary: 3000, workingDaysPerMonth: 22, hoursPerDay: 8 }
+  financials: { monthlyFixedCosts: 1500, desiredMonthlySalary: 3000, workingDaysPerMonth: 22, hoursPerDay: 8 },
+  groqApiKey: '',
+  webhookUrl: '',
+  webhookSecret: '',
+  botEnabled: false
 };
 
 const DEFAULT_SYSTEM_CONFIG: SystemConfig = {
@@ -72,7 +76,9 @@ export const storage = {
       { k: 'stock', fb: 'stock' },
       { k: 'customers', fb: 'customers' },
       { k: 'coupons', fb: 'coupons' },
-      { k: 'payables', fb: 'payables' }
+      { k: 'payables', fb: 'payables' },
+      { k: 'prospects', fb: 'prospects' },
+      { k: 'message_templates', fb: 'message_templates' }
     ];
 
     const syncTasks = collections.map(async (col) => {
@@ -190,6 +196,53 @@ export const storage = {
   getCustomers: (): Customer[] => {
     const data = localStorage.getItem(storage.getLocalKey('customers'));
     return data ? JSON.parse(data) : [];
+  },
+
+  getProspects: (): Prospect[] => {
+    const data = localStorage.getItem(storage.getLocalKey('prospects'));
+    return data ? JSON.parse(data) : [];
+  },
+
+  saveProspect: (p: Prospect) => {
+    const ps = storage.getProspects();
+    const idx = ps.findIndex(item => item.id === p.id);
+    if (idx >= 0) ps[idx] = p; else ps.push(p);
+    localStorage.setItem(storage.getLocalKey('prospects'), JSON.stringify(ps));
+    syncToFirebase('prospects', p.id, p);
+  },
+
+  savePublicProspect: async (tenantId: string, p: Prospect) => {
+    try {
+      const path = `tenants/${tenantId}`;
+      await setDoc(doc(db, `${path}/prospects`, p.id), p);
+    } catch (e) {
+      console.error("Erro ao salvar prospecto público:", e);
+    }
+  },
+
+  deleteProspect: (id: string) => {
+    const ps = storage.getProspects().filter(p => p.id !== id);
+    localStorage.setItem(storage.getLocalKey('prospects'), JSON.stringify(ps));
+    removeFromFirebase('prospects', id);
+  },
+
+  getMessageTemplates: (): MessageTemplate[] => {
+    const data = localStorage.getItem(storage.getLocalKey('message_templates'));
+    return data ? JSON.parse(data) : [];
+  },
+
+  saveMessageTemplate: (m: MessageTemplate) => {
+    const ms = storage.getMessageTemplates();
+    const idx = ms.findIndex(item => item.id === m.id);
+    if (idx >= 0) ms[idx] = m; else ms.push(m);
+    localStorage.setItem(storage.getLocalKey('message_templates'), JSON.stringify(ms));
+    syncToFirebase('message_templates', m.id, m);
+  },
+
+  deleteMessageTemplate: (id: string) => {
+    const ms = storage.getMessageTemplates().filter(m => m.id !== id);
+    localStorage.setItem(storage.getLocalKey('message_templates'), JSON.stringify(ms));
+    removeFromFirebase('message_templates', id);
   },
 
   saveCustomer: (c: Customer) => {

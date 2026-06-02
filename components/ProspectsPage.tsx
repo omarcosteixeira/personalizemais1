@@ -175,10 +175,14 @@ const ProspectsPage: React.FC = () => {
     if (!template) return;
 
     const settings = storage.getSettings();
-    const useWebhook = settings.webhookUrl && settings.webhookSecret && settings.botEnabled;
+    const useWebhook = !!(settings.webhookUrl && settings.webhookSecret);
 
-    if (!useWebhook && selectedProspects.length > 1) {
-      alert("Para múltiplos envios pelo WhatsApp Web, o navegador pode bloquear abas. Serão abertos um por um (Recomendamos configurar o Bot na aba de Inteligência Artificial para envios invisíveis).");
+    if (!useWebhook && selectedProspects.length > 0) {
+      const proceed = window.confirm("O Servidor Bot não está configurado com URL e Senha. O envio será feito abrindo abas do WhatsApp Web manualmente.\n\nPara envio automático e oculto, configure o link do Bot no menu 'Configurações'.\n\nDeseja continuar pelas abas do WhatsApp Web agora?");
+      if (!proceed) {
+        setIsSendingMessage(false);
+        return;
+      }
     }
     
     let successCount = 0;

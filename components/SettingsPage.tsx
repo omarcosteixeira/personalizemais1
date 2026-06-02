@@ -473,27 +473,68 @@ const SettingsPage: React.FC = () => {
                   <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Status da IA do Bot</span>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Link do Webhook (Railway)</label>
-                  <input 
-                    type="url"
-                    value={settings.webhookUrl || ''} 
-                    onChange={e => setSettings({...settings, webhookUrl: e.target.value})}
-                    placeholder="https://seu-bot.up.railway.app"
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Link do Webhook (Railway)</label>
+                    <input 
+                      type="url"
+                      value={settings.webhookUrl || ''} 
+                      onChange={e => setSettings({...settings, webhookUrl: e.target.value})}
+                      placeholder="https://seu-bot.up.railway.app"
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha Secreta</label>
+                    <input 
+                      type="password"
+                      value={settings.webhookSecret || ''} 
+                      onChange={e => setSettings({...settings, webhookSecret: e.target.value})}
+                      placeholder="Sua senha secreta do bot"
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                    />
+                  </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha Secreta</label>
-                  <input 
-                    type="password"
-                    value={settings.webhookSecret || ''} 
-                    onChange={e => setSettings({...settings, webhookSecret: e.target.value})}
-                    placeholder="Sua senha secreta do bot"
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
-                  />
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <button 
+                    onClick={async () => {
+                      if (!settings.webhookUrl || !settings.webhookSecret) {
+                        return alert("Preencha o link do webhook e a senha primeiro.");
+                      }
+                      try {
+                        const url = `${settings.webhookUrl.replace(/\/$/, '')}/api/status`; 
+                        const res = await fetch(url);
+                        if (res.ok) alert("✅ Conexão estabelecida com sucesso!");
+                        else alert("⚠️ Conexão falhou. Status da resposta: " + res.status);
+                      } catch (e) {
+                         alert("❌ Erro ao conectar com o servidor do bot. Verifique o link fornecido.");
+                      }
+                    }}
+                    className="px-6 py-3 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all"
+                  >
+                    Testar Conexão com Servidor
+                  </button>
+                  
+                  <button 
+                    onClick={async () => {
+                       if (!settings.webhookUrl || !settings.webhookSecret) {
+                        return alert("Preencha o link do webhook e a senha primeiro.");
+                       }
+                       // Exemplo chamando rota de auth/qr do sistema de backend
+                       alert(`Para parear o WhatsApp, acesse diretamente o servidor do seu bot para gerar o QR ou acompanhe o terminal do mesmo.\nLink do Bot: ${settings.webhookUrl}`);
+                       // Exemplo: se o bot tiver rota de qr-code: window.open(`${settings.webhookUrl}/qr`, '_blank');
+                    }}
+                    className="px-6 py-3 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all"
+                  >
+                    Parear WhatsApp (QR Code / Código)
+                  </button>
                 </div>
+                <p className="text-[10px] text-slate-400 pt-2">
+                  Nota: Se o seu bot no Railway tiver uma rota específica para gerador do QR (ex: /qr), o botão acima pode ser modificado no código para abrir na nova aba.
+                </p>
+
               </div>
             </div>
           </div>

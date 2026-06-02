@@ -25,13 +25,20 @@ import {
 interface Props {
   products: Product[];
   settings?: AppSettings;
+  tenantId?: string;
 }
 
-const Storefront: React.FC<Props> = ({ products, settings: propSettings }) => {
+const Storefront: React.FC<Props> = ({ products, settings: propSettings, tenantId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [currentBanner, setCurrentBanner] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  const [showPromoModal, setShowPromoModal] = useState(false);
+  const [promoName, setPromoName] = useState('');
+  const [promoPhone, setPromoPhone] = useState('');
+  const [promoEmail, setPromoEmail] = useState('');
+  const [isSubmittingPromo, setIsSubmittingPromo] = useState(false);
   
   const localSettings = storage.getSettings();
   const settings = propSettings || localSettings;
@@ -84,6 +91,28 @@ const Storefront: React.FC<Props> = ({ products, settings: propSettings }) => {
     const phone = settings.phone.replace(/\D/g, '');
     const message = `Olá! Não achei o produto que eu queria na loja online da ${settings.businessName}, gostaria de solicitar um orçamento personalizado por aqui.`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const handlePromoSubmit = async () => {
+    if (!promoName || !promoPhone) return alert("Preencha nome e WhatsApp.");
+    setIsSubmittingPromo(true);
+    const p = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: promoName,
+      phone: promoPhone,
+      email: promoEmail,
+      createdAt: new Date().toISOString()
+    };
+    if (tenantId) {
+      await storage.savePublicProspect(tenantId, p);
+    } else {
+      // preview environment
+      storage.saveProspect(p);
+    }
+    setIsSubmittingPromo(false);
+    setShowPromoModal(false);
+    alert("Inscrição efetuada com sucesso!");
+    setPromoName(''); setPromoPhone(''); setPromoEmail('');
   };
 
   const primaryColor = settings.theme.primaryColor;
@@ -167,10 +196,23 @@ const Storefront: React.FC<Props> = ({ products, settings: propSettings }) => {
              <p className="text-xs text-slate-500 mb-4 leading-relaxed">Se não encontrou no catálogo, nossa equipe pode criar do zero para você.</p>
              <button 
               onClick={handleCustomQuote}
-              className="w-full py-3 rounded-xl text-white text-xs font-black uppercase tracking-widest shadow-md transition-all hover:scale-105"
+              className="w-full py-3 rounded-xl text-white text-xs font-black uppercase tracking-widest shadow-md transition-all hover:scale-105 mb-4"
               style={{ backgroundColor: secondaryColor }}
              >
                Solicitar Orçamento
+             </button>
+
+             <div className="w-full h-px bg-slate-200 my-4"></div>
+
+             <h4 className="text-sm font-black text-slate-800 mb-2 flex items-center justify-center gap-2">
+               <Star className="w-4 h-4 text-emerald-500 fill-current" /> Receba Promoções
+             </h4>
+             <p className="text-xs text-slate-500 mb-4 leading-relaxed">Cadastre seu número e receba descontos exclusivos em primeira mão.</p>
+             <button 
+              onClick={() => setShowPromoModal(true)}
+              className="w-full py-3 rounded-xl bg-slate-800 text-white text-xs font-black uppercase tracking-widest shadow-md transition-all hover:scale-105"
+             >
+               Cadastrar Agora
              </button>
           </div>
         </aside>
@@ -474,6 +516,49 @@ const Storefront: React.FC<Props> = ({ products, settings: propSettings }) => {
                   Fechar
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPromoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-300 p-8">
+            <button 
+              onClick={() => setShowPromoModal(false)} 
+              className="absolute top-6 right-6 z-10 p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-900 transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Star className="w-8 h-8 fill-current" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800">Clube de Vantagens</h3>
+              <p className="text-sm text-slate-500 mt-2">Cadastre-se para receber descontos, novidades e ofertas exclusivas no seu WhatsApp.</p>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-4">Seu Nome</label>
+                <input type="text" value={promoName} onChange={e => setPromoName(e.target.value)} placeholder="Como gosta de ser chamado" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-slate-700" />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-4">WhatsApp</label>
+                <input type="tel" value={promoPhone} onChange={e => setPromoPhone(e.target.value)} placeholder="(11) 99999-9999" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-slate-700" />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-4">Email (Opcional)</label>
+                <input type="email" value={promoEmail} onChange={e => setPromoEmail(e.target.value)} placeholder="seu@email.com" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-slate-700" />
+              </div>
+
+              <button 
+                onClick={handlePromoSubmit}
+                disabled={isSubmittingPromo}
+                className={`w-full py-4 mt-4 rounded-2xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 text-white transition-all ${isSubmittingPromo ? 'bg-slate-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:scale-105'}`}
+              >
+                {isSubmittingPromo ? 'Enviando...' : 'Quero me Cadastrar'}
+              </button>
             </div>
           </div>
         </div>

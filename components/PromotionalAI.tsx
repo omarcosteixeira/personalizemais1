@@ -52,7 +52,7 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
         setError(null);
       }
     } catch (err: any) {
-      if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+      if (err.name === 'AbortError' || err.message?.includes('aborted') || String(err).includes('aborted')) {
         return;
       }
       console.error("Erro ao abrir seletor de chaves:", err);
@@ -90,9 +90,9 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
       // 3. Gerar Roteiro de Vendas (Flash)
       const textPrompt = `Aja como um especialista em marketing para gráficas rápidas. Crie uma legenda persuasiva para Instagram para o produto: ${productName}. Objetivo: ${objective}. Preço: ${productPrice}. Inclua emojis e CTA para o WhatsApp ${settings.phone}.`;
       
-      const groqKey = import.meta.env.VITE_GROQ_API_KEY;
+      const groqKey = settings.groqApiKey || import.meta.env.VITE_GROQ_API_KEY;
       if (!groqKey) {
-        setError("Chave Groq não configurada no ambiente.");
+        setError("Chave Groq não configurada no ambiente ou nas configurações.");
         setIsGenerating(false);
         return;
       }
@@ -143,13 +143,14 @@ const PromotionalAI: React.FC<Props> = ({ products }) => {
       }
 
     } catch (err: any) {
-      console.error("Erro na API Gemini:", err);
-      const msg = err.message || "";
+      const msg = err.message || String(err);
       
       if (err.name === 'AbortError' || msg.includes('aborted')) {
         setError("Criação cancelada.");
         return;
       }
+
+      console.error("Erro na API Gemini:", err);
 
       if (msg.includes("API key") || msg.includes("Requested entity was not found")) {
         setError("Chave Inválida ou Sem Saldo. Certifique-se de selecionar uma chave 'AIza...' de um projeto com faturamento ativo.");

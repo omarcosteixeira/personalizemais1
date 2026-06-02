@@ -3,12 +3,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { storage } from '../services/storageService';
 import { auth } from '../services/firebaseService';
 import { AppSettings, ShippingOption, SidebarBanner, CustomFont } from '../types';
-import { Save, Building, MapPin, Phone, Mail, Instagram, Facebook, Globe, Upload, Image as ImageIcon, X, Truck, Plus, Layout, MessageSquare, Palette, Settings, ShoppingBag, Music, ExternalLink, ToggleLeft, ToggleRight, Type, FileUp, Trash2, Copy, Check } from 'lucide-react';
+import { Save, Building, MapPin, Phone, Mail, Instagram, Facebook, Globe, Upload, Image as ImageIcon, X, Truck, Plus, Layout, MessageSquare, Palette, Settings, ShoppingBag, Music, ExternalLink, ToggleLeft, ToggleRight, Type, FileUp, Trash2, Copy, Check, Sparkles, Key } from 'lucide-react';
 
 const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(storage.getSettings());
   const [customFonts, setCustomFonts] = useState<CustomFont[]>(storage.getCustomFonts());
-  const [activeTab, setActiveTab] = useState<'business' | 'logistics' | 'messages' | 'appearance' | 'fonts'>('business');
+  const [activeTab, setActiveTab] = useState<'business' | 'logistics' | 'messages' | 'appearance' | 'fonts' | 'ai'>('business');
   const [copied, setCopied] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -164,7 +164,8 @@ const SettingsPage: React.FC = () => {
           { id: 'logistics', label: 'Banners e Fretes', icon: Truck },
           { id: 'messages', label: 'Mensagens WA', icon: MessageSquare },
           { id: 'appearance', label: 'Aparência', icon: Palette },
-          { id: 'fonts', label: 'Fontes', icon: Type }
+          { id: 'fonts', label: 'Fontes', icon: Type },
+          { id: 'ai', label: 'Inteligência Artificial', icon: Sparkles }
         ].map(tab => (
           <button 
             key={tab.id}
@@ -410,6 +411,90 @@ const SettingsPage: React.FC = () => {
                   <button onClick={() => deleteFont(font.id)} className="text-red-300 hover:text-red-500"><Trash2 className="w-4 h-4"/></button>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'ai' && (
+        <div className="space-y-8 animate-in slide-in-from-top-4 duration-300">
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 space-y-6">
+            <h4 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+              <Sparkles className="w-5 h-5 text-indigo-500" /> Inteligência Artificial e Bot
+            </h4>
+            
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <h5 className="font-bold text-slate-700 text-sm">Configuração da Groq (Geração de Texto)</h5>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    Sua Chave de API da Groq
+                  </label>
+                  <div className="relative">
+                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                    <input 
+                      type="password"
+                      value={settings.groqApiKey || ''} 
+                      onChange={e => setSettings({...settings, groqApiKey: e.target.value})}
+                      placeholder="gsk_..."
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Insira sua chave da Groq para habilitar recursos de geração de texto e descrições aprimoradas. 
+                  </p>
+                </div>
+              </div>
+
+              <hr className="border-slate-100" />
+
+              <div className="space-y-4">
+                <h5 className="font-bold text-slate-700 text-sm">Integração do Bot (Railway)</h5>
+                
+                <div className="flex items-center gap-2 mb-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                  <button 
+                    onClick={async () => {
+                      const newStatus = !settings.botEnabled;
+                      setSettings({ ...settings, botEnabled: newStatus });
+                      if (settings.webhookUrl && settings.webhookSecret) {
+                         try {
+                           await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/config-ia`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ habilitar: newStatus, senha: settings.webhookSecret })
+                           });
+                         } catch (e) { console.error("Erro ao configurar IA no bot:", e); }
+                      }
+                    }}
+                    className="p-1"
+                  >
+                    {settings.botEnabled ? <ToggleRight className="w-8 h-8 text-emerald-500" /> : <ToggleLeft className="w-8 h-8 text-slate-300" />}
+                  </button>
+                  <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Status da IA do Bot</span>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Link do Webhook (Railway)</label>
+                  <input 
+                    type="url"
+                    value={settings.webhookUrl || ''} 
+                    onChange={e => setSettings({...settings, webhookUrl: e.target.value})}
+                    placeholder="https://seu-bot.up.railway.app"
+                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha Secreta</label>
+                  <input 
+                    type="password"
+                    value={settings.webhookSecret || ''} 
+                    onChange={e => setSettings({...settings, webhookSecret: e.target.value})}
+                    placeholder="Sua senha secreta do bot"
+                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

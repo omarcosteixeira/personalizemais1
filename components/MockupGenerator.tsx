@@ -101,8 +101,10 @@ const MockupGenerator: React.FC = () => {
       }
 
     } catch (err: any) {
-      console.error(err);
-      if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+      if (err.name !== 'AbortError' && !err.message?.includes('aborted')) {
+        console.error(err);
+      }
+      if (err.name === 'AbortError' || err.message?.includes('aborted') || String(err).includes('aborted')) {
         setError("Seleção de chave ou geração cancelada.");
       } else if (err.message?.includes("Requested entity was not found")) {
         setError("Erro de chave de API. Por favor, selecione uma chave válida com faturamento ativo.");

@@ -32,10 +32,46 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate, onEdit, on
     q.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const updateStatus = (q: Quotation, newStatus: OrderStatus) => {
+  const sendWebhookMessage = async (q: Quotation, status?: OrderStatus) => {
+    if (!settings.webhookUrl || !settings.webhookSecret || !settings.botEnabled) return false;
+    
+    const targetStatus = status || q.status;
+    let template = settings.waMessages.quotation;
+    if (targetStatus === 'AWAITING_PAYMENT') template = settings.waMessages.awaiting_payment;
+    if (targetStatus === 'PRODUCTION') template = settings.waMessages.production;
+    if (targetStatus === 'SHIPPING') template = settings.waMessages.shipping;
+    if (targetStatus === 'DELIVERED') template = settings.waMessages.delivered;
+    if (targetStatus === 'CANCELLED') template = settings.waMessages.cancelled;
+
+    const message = replaceWaTokens(template, q);
+    const cleanPhone = q.customerContact.replace(/\D/g, '');
+
+    try {
+      await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/enviar-mensagem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            telefone: cleanPhone,
+            mensagem: message,
+            senha: settings.webhookSecret
+        })
+      });
+      return true;
+    } catch (e) {
+      console.error("Erro ao notificar via webhook", e);
+      return false;
+    }
+  };
+
+  const updateStatus = async (q: Quotation, newStatus: OrderStatus) => {
     const updated = { ...q, status: newStatus };
     storage.saveQuotation(updated);
     setLocalQuotations(prev => prev.map(item => item.id === q.id ? updated : item));
+    
+    // Auto notify on status change if webhook is active
+    if (settings.webhookUrl && settings.webhookSecret && settings.botEnabled) {
+      await sendWebhookMessage(updated);
+    }
   };
 
   const openPaymentModal = (q: Quotation) => {
@@ -68,6 +104,11 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate, onEdit, on
 
     storage.saveQuotation(updated);
     setLocalQuotations(prev => prev.map(item => item.id === selectedForPay.id ? updated : item));
+    
+    if (updated.status !== selectedForPay.status && settings.webhookUrl && settings.webhookSecret && settings.botEnabled) {
+      sendWebhookMessage(updated);
+    }
+    
     setShowPayModal(false);
     setSelectedForPay(null);
     setPaymentAmount(0);
@@ -101,7 +142,13 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate, onEdit, on
       .replace(/{id}/g, quotation.id);
   };
 
-  const notifyClient = (q: Quotation) => {
+  const notifyClient = async (q: Quotation) => {
+    const sentViaWebhook = await sendWebhookMessage(q);
+    if (sentViaWebhook) {
+       alert("Mensagem enviada com sucesso em segundo plano via Bot!");
+       return;
+    }
+
     let template = settings.waMessages.quotation;
     if (q.status === 'AWAITING_PAYMENT') template = settings.waMessages.awaiting_payment;
     if (q.status === 'PRODUCTION') template = settings.waMessages.production;
@@ -111,7 +158,7 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate, onEdit, on
 
     const message = replaceWaTokens(template, q);
     const phone = q.customerContact.replace(/\D/g, '');
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const statusList: { key: OrderStatus, label: string }[] = [

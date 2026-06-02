@@ -87,7 +87,8 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
     try {
       const prompt = `Melhore esta descrição de produto para uma gráfica rápida, tornando-a persuasiva: Produto: ${name}. Categoria: ${category}. Texto base: ${description}.`;
       
-      const groqKey = import.meta.env.VITE_GROQ_API_KEY;
+      const settings = storage.getSettings();
+      const groqKey = settings.groqApiKey || import.meta.env.VITE_GROQ_API_KEY;
       if (!groqKey) throw new Error("Chave Groq não configurada");
 
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -109,8 +110,8 @@ const ProductCatalog: React.FC<Props> = ({ products, onUpdate }) => {
       
       if (improvedText) setDescription(improvedText.trim());
     } catch (error: any) {
+      if (error.name === 'AbortError' || error.message?.includes('aborted') || String(error).includes('aborted')) return;
       console.error(error);
-      if (error.name === 'AbortError' || error.message?.includes('aborted')) return;
       alert("IA indisponível no momento.");
     } finally {
       setIsAiLoading(false);

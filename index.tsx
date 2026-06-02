@@ -8,6 +8,15 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  const msg = args.map(a => String(a)).join(' ');
+  if (msg.includes('abort') || msg.includes('AbortError') || msg.includes('cancel') || msg.includes('Missing or insufficient permissions')) {
+    return; // ignore
+  }
+  originalConsoleError(...args);
+};
+
 window.addEventListener('unhandledrejection', (event) => {
   const msg = event.reason?.message || String(event.reason);
   if (msg.toLowerCase().includes('abort')) {

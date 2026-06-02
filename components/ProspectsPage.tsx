@@ -209,11 +209,25 @@ const ProspectsPage: React.FC = () => {
                    senha: settings.webhookSecret
                })
             });
-            if (resp.ok) {
-              storage.saveProspect({ ...p, webhookStatus: 'SUCCESS' });
-              successCount++;
-            } else {
-              storage.saveProspect({ ...p, webhookStatus: 'ERROR' });
+            
+            try {
+              const dados = await resp.json();
+              if (dados.sucesso || resp.ok) {
+                storage.saveProspect({ ...p, webhookStatus: 'SUCCESS' });
+                successCount++;
+              } else {
+                console.error("Erro do bot (json):", dados.erro);
+                storage.saveProspect({ ...p, webhookStatus: 'ERROR' });
+              }
+            } catch (e) {
+               // Fallback when response is not JSON
+               if (resp.ok) {
+                 storage.saveProspect({ ...p, webhookStatus: 'SUCCESS' });
+                 successCount++;
+               } else {
+                 console.error("Erro do bot (status):", resp.status);
+                 storage.saveProspect({ ...p, webhookStatus: 'ERROR' });
+               }
             }
           } catch (e) {
             console.error("Erro ao enviar pelo webhook", e);
@@ -224,7 +238,8 @@ const ProspectsPage: React.FC = () => {
           // Fallback to window.open
           setTimeout(() => {
             const encodedText = encodeURIComponent(text);
-            window.open(`https://wa.me/55${cleanPhone}?text=${encodedText}`, '_blank');
+            const finalPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+            window.open(`https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodedText}`, '_blank');
           }, i * 1500); 
         }
       }

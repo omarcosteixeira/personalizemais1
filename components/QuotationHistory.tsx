@@ -158,7 +158,8 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate, onEdit, on
 
     const message = replaceWaTokens(template, q);
     const phone = q.customerContact.replace(/\D/g, '');
-    window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(message)}`, '_blank');
+    const finalPhone = phone.startsWith('55') ? phone : `55${phone}`;
+    window.open(`https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const statusList: { key: OrderStatus, label: string }[] = [

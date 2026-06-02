@@ -84,13 +84,15 @@ const Storefront: React.FC<Props> = ({ products, settings: propSettings, tenantI
       .replace(/{empresa}/g, settings.businessName);
 
     const phone = settings.phone.replace(/\D/g, '');
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+    const finalPhone = phone.startsWith('55') ? phone : `55${phone}`;
+    window.open(`https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const handleCustomQuote = () => {
     const phone = settings.phone.replace(/\D/g, '');
     const message = `Olá! Não achei o produto que eu queria na loja online da ${settings.businessName}, gostaria de solicitar um orçamento personalizado por aqui.`;
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+    const finalPhone = phone.startsWith('55') ? phone : `55${phone}`;
+    window.open(`https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const handlePromoSubmit = async () => {

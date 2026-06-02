@@ -204,7 +204,11 @@ const NewQuotation: React.FC<Props> = ({ products, initialData, isEditing, onSav
     if (!pendingQuotation) return;
     storage.saveQuotation({ ...pendingQuotation, customMessage: sendWa ? customMessage : undefined });
     pdfService.generateQuotation(pendingQuotation).save(`${pendingQuotation.id}.pdf`);
-    if (sendWa) window.open(`https://wa.me/${customerContact.replace(/\D/g, '')}?text=${encodeURIComponent(customMessage)}`, '_blank');
+    if (sendWa) {
+      const p = customerContact.replace(/\D/g, '');
+      const finalPhone = p.startsWith('55') ? p : `55${p}`;
+      window.open(`https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(customMessage)}`, '_blank');
+    }
     onSave(); setShowWhatsappModal(false); setPendingQuotation(null);
   };
 

@@ -8,6 +8,20 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
+window.addEventListener('unhandledrejection', (event) => {
+  const msg = event.reason?.message || String(event.reason);
+  if (msg.toLowerCase().includes('abort')) {
+    event.preventDefault();
+  }
+});
+
+window.addEventListener('error', (event) => {
+  const msg = event.message || String(event.error);
+  if (msg.toLowerCase().includes('abort')) {
+    event.preventDefault();
+  }
+});
+
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>

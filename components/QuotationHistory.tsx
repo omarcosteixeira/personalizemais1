@@ -51,6 +51,7 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate, onEdit, on
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+            idSessao: settings.botSessionId || 'vendas',
             telefone: cleanPhone,
             mensagem: message,
             senha: settings.webhookSecret

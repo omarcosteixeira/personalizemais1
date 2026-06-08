@@ -208,6 +208,7 @@ const ProspectsPage: React.FC = () => {
                method: 'POST',
                headers: { 'Content-Type': 'application/json' },
                body: JSON.stringify({
+                   idSessao: settings.botSessionId || 'vendas',
                    telefone: cleanPhone,
                    mensagem: text,
                    senha: settings.webhookSecret
@@ -233,8 +234,9 @@ const ProspectsPage: React.FC = () => {
                  storage.saveProspect({ ...p, webhookStatus: 'ERROR' });
                }
             }
-          } catch (e) {
+          } catch (e: any) {
             console.error("Erro ao enviar pelo webhook", e);
+            alert(`Falha ao contactar o servidor Bot (Render): ${e.message}\n\nSe não apareceu nada no log do Render, o navegador bloqueou a requisição por falta de CORS no servidor do Bot.\n\nPara corrigir, adicione ao seu index.js (Bot):\n\nconst cors = require('cors');\napp.use(cors());\n\nIsso permitirá que o site envie os disparos para ele.`);
             storage.saveProspect({ ...p, webhookStatus: 'ERROR' });
           }
           setProspects(storage.getProspects());

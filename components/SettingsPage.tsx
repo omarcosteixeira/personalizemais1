@@ -473,8 +473,8 @@ const SettingsPage: React.FC = () => {
                   <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Status da IA do Bot</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2 col-span-1 md:col-span-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Link do Webhook (Render / Local)</label>
                     <input 
                       type="url"
@@ -486,6 +486,17 @@ const SettingsPage: React.FC = () => {
                   </div>
                   
                   <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sessão (ex: vendas)</label>
+                    <input 
+                      type="text"
+                      value={settings.botSessionId || 'vendas'} 
+                      onChange={e => setSettings({...settings, botSessionId: e.target.value})}
+                      placeholder="vendas"
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2 col-span-1 md:col-span-3">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha Secreta</label>
                     <input 
                       type="password"
@@ -515,7 +526,33 @@ const SettingsPage: React.FC = () => {
                     }}
                     className="px-6 py-3 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all"
                   >
-                    Testar Conexão com Servidor
+                    Testar Conexão
+                  </button>
+
+                  <button 
+                    onClick={async () => {
+                       if (!settings.webhookUrl || !settings.webhookSecret) {
+                        return alert("Preencha o link do webhook e a senha primeiro.");
+                       }
+                       const sessao = settings.botSessionId || 'vendas';
+                       try {
+                         const maxRes = await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/iniciar-sessao`, {
+                           method: 'POST',
+                           headers: { 'Content-Type': 'application/json' },
+                           body: JSON.stringify({ idSessao: sessao, senha: settings.webhookSecret })
+                         });
+                         if(maxRes.ok) {
+                            alert(`Sessão "${sessao}" iniciada! Agora clique em 'Ver QR Code'.`);
+                         } else {
+                            alert("Falha ao iniciar a sessão. Erro do servidor.");
+                         }
+                       } catch(e) {
+                          alert(`Falha de CORS ao iniciar sessão. Certifique-se que o /api/iniciar-sessao do bot suporta CORS.`);
+                       }
+                    }}
+                    className="px-6 py-3 bg-indigo-600 border border-indigo-700 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all"
+                  >
+                    Iniciar Sessão
                   </button>
                   
                   <button 
@@ -523,16 +560,17 @@ const SettingsPage: React.FC = () => {
                        if (!settings.webhookUrl || !settings.webhookSecret) {
                         return alert("Preencha o link do webhook e a senha primeiro.");
                        }
-                       const qrUrl = `${settings.webhookUrl.replace(/\/$/, '')}/api/qrcode`;
+                       const sessao = settings.botSessionId || 'vendas';
+                       const qrUrl = `${settings.webhookUrl.replace(/\/$/, '')}/api/qrcode/${sessao}`;
                        window.open(qrUrl, '_blank');
                     }}
                     className="px-6 py-3 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all"
                   >
-                    Parear WhatsApp (QR Code / Código)
+                    Ver QR Code
                   </button>
                 </div>
                 <p className="text-[10px] text-slate-400 pt-2">
-                  Nota: O botão acima abrirá a rota /api/qrcode do seu bot.
+                  Nota: Você deve primeiro "Iniciar Sessão" (cria a instância), e depois "Ver QR Code" para ler com seu celular.
                 </p>
 
               </div>

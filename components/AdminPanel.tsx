@@ -9,7 +9,11 @@ import { Users, CheckCircle, Clock, Trash2, ShieldCheck, Mail, Calendar, Trendin
 const AdminPanel: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'sales'>('users');
+  const isSuperAdmin = auth.currentUser?.email === 'atelie.arianeartes@gmail.com';
+  
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'sales' | 'bot'>(isSuperAdmin ? 'users' : 'bot');
+  const [settings, setSettings] = useState(() => storage.getSettings());
+  const [newSessionName, setNewSessionName] = useState('');
   
   // Config States
   const [sysConfig, setSysConfig] = useState<SystemConfig>({
@@ -19,8 +23,6 @@ const AdminPanel: React.FC = () => {
     proPlanPaymentLink: '',
     paymentLink: ''
   });
-
-  const isSuperAdmin = auth.currentUser?.email === 'atelie.arianeartes@gmail.com';
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -86,22 +88,30 @@ const AdminPanel: React.FC = () => {
             <ShieldCheck className="w-8 h-8 text-indigo-600" /> Painel de Controle
           </h3>
           
-          {isSuperAdmin && (
             <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl">
+              {isSuperAdmin && (
+                <>
+                  <button 
+                    onClick={() => setActiveSubTab('users')}
+                    className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${activeSubTab === 'users' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}
+                  >
+                    USUÁRIOS
+                  </button>
+                  <button 
+                    onClick={() => setActiveSubTab('sales')}
+                    className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${activeSubTab === 'sales' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}
+                  >
+                    VENDAS
+                  </button>
+                </>
+              )}
               <button 
-                onClick={() => setActiveSubTab('users')}
-                className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${activeSubTab === 'users' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}
+                onClick={() => setActiveSubTab('bot')}
+                className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${activeSubTab === 'bot' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}
               >
-                USUÁRIOS
-              </button>
-              <button 
-                onClick={() => setActiveSubTab('sales')}
-                className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${activeSubTab === 'sales' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}
-              >
-                VENDAS
+                BOT SESSÕES
               </button>
             </div>
-          )}
         </div>
 
         {activeSubTab === 'users' && (
@@ -219,6 +229,105 @@ const AdminPanel: React.FC = () => {
               >
                 <Save className="w-5 h-5" /> SALVAR CONFIGURAÇÕES DE VENDA
               </button>
+            </div>
+          </div>
+        )}
+
+        {activeSubTab === 'bot' && (
+          <div className="max-w-4xl space-y-8 animate-in slide-in-from-top-4">
+            <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100 space-y-6">
+              <h4 className="font-black text-indigo-900 text-xs uppercase tracking-widest flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" /> Gerenciar Sessões do Bot
+              </h4>
+              
+              <div className="flex gap-4 items-end">
+                <div className="flex-1 space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase">Nova Sessão (ex: afiliados)</label>
+                  <input 
+                    type="text" 
+                    value={newSessionName} 
+                    onChange={e => setNewSessionName(e.target.value.toLowerCase().trim())}
+                    placeholder="Nome da sessão"
+                    className="w-full p-4 bg-white border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" 
+                  />
+                </div>
+                <button 
+                  onClick={() => {
+                    if (!newSessionName) return;
+                    const updatedSessions = Array.from(new Set([...(settings.botSessions || []), newSessionName]));
+                    const newSettings = { ...settings, botSessions: updatedSessions };
+                    setSettings(newSettings);
+                    storage.saveSettings(newSettings);
+                    setNewSessionName('');
+                  }}
+                  className="px-6 py-4 bg-indigo-600 text-white font-black rounded-xl shadow-xl hover:bg-indigo-700 transition-all"
+                >
+                  Adicionar Sessão
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                {(settings.botSessions || []).map((sessao: string) => (
+                  <div key={sessao} className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col justify-between items-start gap-4 shadow-sm">
+                    <div className="flex justify-between items-center w-full">
+                      <h5 className="font-bold text-slate-800 text-lg">{sessao}</h5>
+                      <button 
+                        onClick={() => {
+                          if (confirm(`Remover sessão ${sessao}?`)) {
+                            const updatedSessions = settings.botSessions.filter((s: string) => s !== sessao);
+                            const newSettings = { ...settings, botSessions: updatedSessions };
+                            setSettings(newSettings);
+                            storage.saveSettings(newSettings);
+                          }
+                        }}
+                        className="p-2 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 w-full">
+                      <button 
+                        onClick={async () => {
+                          if (!settings.webhookUrl || !settings.webhookSecret) {
+                            return alert("Preencha o link do webhook e a senha na aba de configurações primeiro.");
+                          }
+                          try {
+                            const res = await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/iniciar-sessao`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ idSessao: sessao, senha: settings.webhookSecret })
+                            });
+                            if (res.ok) alert(`Sessão "${sessao}" iniciada no servidor.`);
+                            else alert("Falha ao iniciar. Verifique os logs do servidor bot.");
+                          } catch (e: any) {
+                             alert(`Erro ao iniciar sessão: ${e.message}`);
+                          }
+                        }}
+                        className="flex-1 px-4 py-3 bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-200 transition-all text-center"
+                      >
+                        1. Iniciar Sessão
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                           if (!settings.webhookUrl) return alert("Configure o Link do Webhook.");
+                           window.open(`${settings.webhookUrl.replace(/\/$/, '')}/api/qrcode/${sessao}`, '_blank');
+                        }}
+                        className="flex-1 px-4 py-3 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-200 transition-all text-center"
+                      >
+                        2. Ver QR Code
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {(settings.botSessions || []).length === 0 && (
+                  <div className="col-span-full py-8 text-center text-slate-400">
+                    Nenhuma sessão configurada.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

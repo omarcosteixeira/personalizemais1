@@ -33,7 +33,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   groqApiKey: '',
   webhookUrl: '',
   webhookSecret: '',
-  botEnabled: false
+  botEnabled: false,
+  botSessionId: 'vendas',
+  botSessions: ['vendas']
 };
 
 const DEFAULT_SYSTEM_CONFIG: SystemConfig = {

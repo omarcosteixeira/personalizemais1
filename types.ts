@@ -177,6 +177,8 @@ export interface AppSettings {
   webhookUrl?: string;
   webhookSecret?: string;
   botEnabled?: boolean;
+  botSessionId?: string;
+  botSessions?: string[];
 }
 
 export interface StockItem {

@@ -47,7 +47,7 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate, onEdit, on
     const cleanPhone = q.customerContact.replace(/\D/g, '');
 
     try {
-      await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/enviar-mensagem`, {
+      const response = await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/enviar-mensagem`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -57,9 +57,18 @@ const QuotationHistory: React.FC<Props> = ({ quotations, onDuplicate, onEdit, on
             senha: settings.webhookSecret
         })
       });
-      return true;
+      
+      const dados = await response.json();
+
+      if (dados.sucesso) {
+          console.log("✅ Mensagem enviada com sucesso!");
+          return true;
+      } else {
+          console.error("Erro do Bot:", dados.erro);
+          return false;
+      }
     } catch (e) {
-      console.error("Erro ao notificar via webhook", e);
+      console.error("Falha de conexão com o Bot:", e);
       return false;
     }
   };

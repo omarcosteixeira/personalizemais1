@@ -17,6 +17,7 @@ const SettingsPage: React.FC = () => {
   const fontInputRef = useRef<HTMLInputElement>(null);
 
   const [newShipping, setNewShipping] = useState({ name: '', price: 0 });
+  const [qrImageUrl, setQrImageUrl] = useState('');
 
   // Gera o link único da loja
   const storeLink = `${window.location.origin}/?store=${auth.currentUser?.uid}`;
@@ -458,12 +459,22 @@ const SettingsPage: React.FC = () => {
                       setSettings({ ...settings, botEnabled: newStatus });
                       if (settings.webhookUrl && settings.webhookSecret) {
                          try {
-                           await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/config-ia`, {
+                           const res = await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/config-ia`, {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ habilitar: newStatus, senha: settings.webhookSecret })
                            });
-                         } catch (e) { console.error("Erro ao configurar IA no bot:", e); }
+                           
+                           const dados = await res.json();
+                           if (dados.sucesso) {
+                               alert(`✅ ${dados.mensagem}`);
+                           } else {
+                               alert("⚠️ Erro ao configurar IA: " + dados.erro);
+                           }
+                         } catch (e) { 
+                             console.error("Erro ao configurar IA no bot:", e); 
+                             alert("Erro de comunicação ao tentar mudar o status da IA.");
+                         }
                       }
                     }}
                     className="p-1"
@@ -486,14 +497,16 @@ const SettingsPage: React.FC = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sessão (ex: vendas)</label>
-                    <input 
-                      type="text"
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sessão Padrão</label>
+                    <select 
                       value={settings.botSessionId || 'vendas'} 
                       onChange={e => setSettings({...settings, botSessionId: e.target.value})}
-                      placeholder="vendas"
                       className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
-                    />
+                    >
+                      {(settings.botSessions && settings.botSessions.length > 0 ? settings.botSessions : ['vendas']).map((sessao: string) => (
+                        <option key={sessao} value={sessao}>{sessao}</option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="space-y-2 col-span-1 md:col-span-3">
@@ -514,19 +527,19 @@ const SettingsPage: React.FC = () => {
                       if (!settings.webhookUrl || !settings.webhookSecret) {
                         return alert("Preencha o link do webhook e a senha primeiro.");
                       }
-                      const url = `${settings.webhookUrl.replace(/\/$/, '')}/api/status`; 
+                      const url = `${settings.webhookUrl.replace(/\/$/, '')}/api/ping`; 
                       try {
                         const res = await fetch(url);
-                        if (res.ok) alert("✅ Conexão estabelecida com sucesso!");
-                        else alert("⚠️ Conexão falhou. Status da resposta: " + res.status);
+                        const dados = await res.json();
+                        if (dados.sucesso) alert("✅ Servidor do Bot está ONLINE e operante!");
+                        else alert("⚠️ Servidor respondeu, mas com erro.");
                       } catch (e) {
-                         alert("❌ Erro na chamada local (possível bloqueio de CORS). O link de status será aberto em uma nova aba para testar diretamente.");
-                         window.open(url, '_blank');
+                         alert("❌ Falha de comunicação. O servidor do bot pode estar offline.");
                       }
                     }}
                     className="px-6 py-3 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all"
                   >
-                    Testar Conexão
+                    Testar Conexão do Servidor
                   </button>
 
                   <button 
@@ -535,43 +548,63 @@ const SettingsPage: React.FC = () => {
                         return alert("Preencha o link do webhook e a senha primeiro.");
                        }
                        const sessao = settings.botSessionId || 'vendas';
+                       setQrImageUrl('');
+                       
                        try {
-                         const maxRes = await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/iniciar-sessao`, {
+                         await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/iniciar-sessao`, {
                            method: 'POST',
                            headers: { 'Content-Type': 'application/json' },
                            body: JSON.stringify({ idSessao: sessao, senha: settings.webhookSecret })
                          });
-                         if(maxRes.ok) {
-                            alert(`Sessão "${sessao}" iniciada! Agora clique em 'Ver QR Code'.`);
-                         } else {
-                            alert("Falha ao iniciar a sessão. Erro do servidor.");
-                         }
+
+                         setTimeout(async () => {
+                            try {
+                                const respostaQR = await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/qrcode/${sessao}`);
+                                const dadosQR = await respostaQR.json();
+
+                                if (dadosQR.qr_imagem_url) {
+                                    setQrImageUrl(dadosQR.qr_imagem_url);
+                                    alert("QR Code gerado! Verifique a área de imagem abaixo.");
+                                } else {
+                                    alert("QR Code não disponível. Status: " + (dadosQR.mensagem || 'Desconhecido'));
+                                }
+                            } catch (e) {
+                                alert("Erro ao buscar a imagem do QR Code.");
+                            }
+                         }, 2000);
                        } catch(e) {
-                          alert(`Falha de CORS ao iniciar sessão. Certifique-se que o /api/iniciar-sessao do bot suporta CORS.`);
+                          alert(`Falha de comunicação para iniciar o Whatsapp.`);
                        }
                     }}
-                    className="px-6 py-3 bg-indigo-600 border border-indigo-700 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all"
+                    className="px-6 py-3 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all"
                   >
-                    Iniciar Sessão
+                    Ver QR Code
                   </button>
-                  
+
                   <button 
                     onClick={async () => {
                        if (!settings.webhookUrl || !settings.webhookSecret) {
                         return alert("Preencha o link do webhook e a senha primeiro.");
                        }
                        const sessao = settings.botSessionId || 'vendas';
-                       const qrUrl = `${settings.webhookUrl.replace(/\/$/, '')}/api/qrcode/${sessao}`;
-                       window.open(qrUrl, '_blank');
+                       const statusUrl = `${settings.webhookUrl.replace(/\/$/, '')}/api/status/${sessao}`;
+                       window.open(statusUrl, '_blank');
                     }}
-                    className="px-6 py-3 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all"
+                    className="px-6 py-3 bg-blue-50 border border-blue-200 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-100 transition-all"
                   >
-                    Ver QR Code
+                    Status do WhatsApp
                   </button>
                 </div>
                 <p className="text-[10px] text-slate-400 pt-2">
-                  Nota: Você deve primeiro "Iniciar Sessão" (cria a instância), e depois "Ver QR Code" para ler com seu celular.
+                  Nota: Clique em "Ver QR Code" para iniciar o WhatsApp do ateliê (demora ~2 segundos para gerar).
                 </p>
+                
+                {qrImageUrl && (
+                  <div className="mt-4 p-4 bg-white border border-slate-200 rounded-xl flex flex-col items-center">
+                     <p className="text-xs font-bold text-slate-600 mb-2">Aponte a câmera do seu celular para o WhatsApp web:</p>
+                     <img src={qrImageUrl} alt="QR Code WhatsApp" className="w-64 h-64 border-4 border-white shadow-xl rounded-xl" />
+                  </div>
+                )}
 
               </div>
             </div>

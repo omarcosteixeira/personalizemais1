@@ -14,6 +14,7 @@ const AdminPanel: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'users' | 'sales' | 'bot'>(isSuperAdmin ? 'users' : 'bot');
   const [settings, setSettings] = useState(() => storage.getSettings());
   const [newSessionName, setNewSessionName] = useState('');
+  const [qrCodes, setQrCodes] = useState<Record<string, string>>({});
   
   // Config States
   const [sysConfig, setSysConfig] = useState<SystemConfig>({
@@ -286,38 +287,62 @@ const AdminPanel: React.FC = () => {
                       </button>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 w-full">
-                      <button 
-                        onClick={async () => {
-                          if (!settings.webhookUrl || !settings.webhookSecret) {
-                            return alert("Preencha o link do webhook e a senha na aba de configurações primeiro.");
-                          }
-                          try {
-                            const res = await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/iniciar-sessao`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ idSessao: sessao, senha: settings.webhookSecret })
-                            });
-                            if (res.ok) alert(`Sessão "${sessao}" iniciada no servidor.`);
-                            else alert("Falha ao iniciar. Verifique os logs do servidor bot.");
-                          } catch (e: any) {
-                             alert(`Erro ao iniciar sessão: ${e.message}`);
-                          }
-                        }}
-                        className="flex-1 px-4 py-3 bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-200 transition-all text-center"
-                      >
-                        1. Iniciar Sessão
-                      </button>
+                    <div className="flex flex-col gap-2 w-full">
+                      <div className="flex flex-wrap gap-2 w-full">
+                        <button 
+                          onClick={async () => {
+                            if (!settings.webhookUrl || !settings.webhookSecret) {
+                              return alert("Preencha o link do webhook e a senha na aba de configurações primeiro.");
+                            }
+                            
+                            setQrCodes(prev => ({...prev, [sessao]: ''}));
+                            
+                            try {
+                              await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/iniciar-sessao`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ idSessao: sessao, senha: settings.webhookSecret })
+                              });
+                              
+                              setTimeout(async () => {
+                                 try {
+                                     const respostaQR = await fetch(`${settings.webhookUrl.replace(/\/$/, '')}/api/qrcode/${sessao}`);
+                                     const dadosQR = await respostaQR.json();
 
-                      <button 
-                        onClick={() => {
-                           if (!settings.webhookUrl) return alert("Configure o Link do Webhook.");
-                           window.open(`${settings.webhookUrl.replace(/\/$/, '')}/api/qrcode/${sessao}`, '_blank');
-                        }}
-                        className="flex-1 px-4 py-3 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-200 transition-all text-center"
-                      >
-                        2. Ver QR Code
-                      </button>
+                                     if (dadosQR.qr_imagem_url) {
+                                         setQrCodes(prev => ({...prev, [sessao]: dadosQR.qr_imagem_url}));
+                                     } else {
+                                         alert("QR Code não disponível. Status: " + (dadosQR.mensagem || 'Desconhecido'));
+                                     }
+                                 } catch (err) {
+                                     alert("Erro ao buscar a imagem do QR Code para a sessão " + sessao);
+                                 }
+                              }, 2000);
+                            } catch (e: any) {
+                               alert(`Erro ao conectar com o bot: ${e.message}`);
+                            }
+                          }}
+                          className="flex-1 px-4 py-3 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-200 transition-all text-center"
+                        >
+                          Gerar QR Code
+                        </button>
+
+                        <button 
+                          onClick={() => {
+                             if (!settings.webhookUrl) return alert("Configure o Link do Webhook.");
+                             window.open(`${settings.webhookUrl.replace(/\/$/, '')}/api/status/${sessao}`, '_blank');
+                          }}
+                          className="flex-1 px-4 py-3 bg-blue-100 text-blue-700 rounded-xl text-xs font-bold hover:bg-blue-200 transition-all text-center"
+                        >
+                          Status
+                        </button>
+                      </div>
+                      
+                      {qrCodes[sessao] && (
+                        <div className="mt-2 p-2 bg-slate-50 border border-slate-200 rounded-xl flex justify-center">
+                           <img src={qrCodes[sessao]} alt={`QR Code ${sessao}`} className="w-48 h-48 rounded-lg shadow-sm" />
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

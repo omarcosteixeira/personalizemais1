@@ -10,8 +10,9 @@ if (!rootElement) {
 
 const originalConsoleError = console.error;
 console.error = (...args) => {
-  const msg = args.map(a => String(a)).join(' ');
-  if (msg.includes('abort') || msg.includes('AbortError') || msg.includes('cancel') || msg.includes('Missing or insufficient permissions')) {
+  const msg = args.map(a => (typeof a === 'object' && a !== null && a.message) ? String(a.message) : String(a)).join(' ').toLowerCase();
+  
+  if (msg.includes('abort') || msg.includes('cancel') || msg.includes('missing or insufficient permissions')) {
     return; // ignore
   }
   originalConsoleError(...args);
